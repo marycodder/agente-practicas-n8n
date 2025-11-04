@@ -137,3 +137,19 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# n8n / secretos
+.env
+.env.*
+.n8n/
+n8n_storage/
+n8n_data/
+backups/
+*.sqlite
+
+# SO/editores
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
