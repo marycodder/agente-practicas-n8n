@@ -6,5 +6,5 @@ El objetivo es desarrollar un flujo automatizado en n8n que recopile prácticas 
 
 Prueba de integración con Taiga ( task #72)
 
-
+Prueba 2
 
