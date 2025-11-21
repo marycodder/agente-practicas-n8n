@@ -1,0 +1,750 @@
+{
+  "name": "Integracion HU13 a HU4",
+  "nodes": [
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://empleos.santander.cl/app/minisite/site/_search",
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "bodyParametersJson": "=={{ {\n  from: 0,\n  size: $json.tamano || 25,\n  query: {\n    simple_query_string: { query: $json.q || '' }\n  }\n} }}",
+        "headerParametersJson": "=={{ {\n  \"User-Agent\": \"Mozilla/5.0\",\n  \"Accept-Language\": \"es-CL,es;q=0.9\",\n  \"Content-Type\": \"application/json\",\n  \"Accept\": \"application/json,*/*\"\n} }}\n"
+      },
+      "id": "2780ec7d-cf45-4150-88bb-04dc7a6d95e9",
+      "name": "HU4 HTTP Santander",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        -1776,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Soporta JSON (hits.hits) o respuesta String (intenta parsear; fallback HTML)\nlet text = $json.data ?? $json.body ?? null;\nlet hits = [];\n\nif (typeof text === \"string\") {\n  let t = text.trim();\n  if (t.startsWith(\")]}'\")) t = t.slice(4).trim(); // anti-XSSI\n  try { const js = JSON.parse(t); hits = js?.hits?.hits || []; } catch {}\n} else if ($json?.hits?.hits) {\n  hits = $json.hits.hits;\n}\n\nif (!hits.length) {\n  // Fallback: intentar raspar enlaces si fue HTML\n  const html = typeof text === \"string\" ? text : \"\";\n  const re = /<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)<\\/a>/gi;\n  const alt = [];\n  let m; \n  while ((m = re.exec(html)) && alt.length < 25) {\n    const link = m[1];\n    const titulo = (m[2] || \"\").replace(/<[^>]+>/g, \"\").trim();\n    if (titulo && link) alt.push({ fuente:\"Santander\", titulo, link, region:\"Sin región\", modalidad:\"Presencial\" });\n  }\n  return alt.length ? alt.map(x => ({ json: x })) \n                    : [{ json: { fuente: \"Santander\", mensaje: \"Sin resultados o respuesta no JSON\" } }];\n}\n\nconst out = hits.map(h => {\n  const s = h._source || h;\n  const titulo = s?.title || \"Sin título\";\n  const link = s?.applyUrl || s?.url || \"\";\n  const region = (s?.location && (s.location.display_name || s.location.city)) || s?.city || \"Sin región\";\n  const modalidad = /remot/i.test(((s?.modality || \"\") + \" \" + region)) ? \"Remoto\" : \"Presencial\";\n  return { fuente: \"Santander\", titulo, link, region, modalidad };\n});\n\nreturn out.map(x => ({ json: x }));\n"
+      },
+      "id": "b5020270-8e8c-429c-a65c-d59347fb138d",
+      "name": "HU4 Parse Santander",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Solicitud de reporte inmediato",
+        "formDescription": "Genera un reporte inmediato usando tus preferencias guardadas.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f946bbfa-9c8e-42d4-bc6d-3ecd0a56a308",
+      "name": "HU4 - Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -3696,
+        0
+      ],
+      "webhookId": "hu4_form_001"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ email: String($input.first().json.Email).trim().toLowerCase() }];"
+      },
+      "id": "9bced04a-c099-45e0-822c-57d606ae1ed4",
+      "name": "Normalizar email HU4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3472,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "93a61adf-edb1-4f5b-9b19-b8db59842231",
+              "leftValue": "={{ $json.exceeded }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "11a42f4d-5fbb-414d-a5f2-f6d39232d60b",
+      "name": "HU13 - IF (exceeded?)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "mensaje",
+              "value": "Has alcanzado tu límite mensual de reportes on-demand."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e58c517e-81cd-477e-af3a-0aad4e029619",
+      "name": "HU13 - Mensaje Límite Alcanzado",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -2320,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const u = $json;\nreturn [{ email: u.Email, region: u[\"Región\"], modalidad: u[\"Modalidad\"], q: \"práctica informática\" }];"
+      },
+      "id": "9b145c60-6258-4638-870d-784e38e40e9c",
+      "name": "HU4 - Build Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2048,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos el email limpio desde lo que dejó el nodo \"Normalizar email HU4\"\nconst email = $('HU4 - Form Trigger').first().json.Email;\n\n// Construimos un subject claro\nconst subject = \"Reporte inmediato de prácticas\";\n\n// Construimos HTML base (luego lo reemplazarás por el real)\nconst html = `\n  <div style=\"font-family: Arial, sans-serif; padding: 10px;\">\n    <h2 style=\"color:#1a73e8;\">Tu reporte inmediato está listo</h2>\n    <p>Este es un reporte de prueba.</p>\n    <p>Pronto integraremos los resultados reales desde Indeed/Laborum/Santander.</p>\n  </div>\n`;\n\nreturn [{\n  json: { email, subject, html },\n  pairedItem: { item: 0 }   // ← COPIA el item original\n}];"
+      },
+      "id": "af87adbc-b7e6-4d18-b305-d78678ed56ae",
+      "name": "HU4 - Build HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1056,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.scraperapi.com?api_key=demo&url=https://cl.indeed.com/jobs?q=práctica+informática&render=true",
+        "responseFormat": "string",
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "e88b5432-5d43-45e5-92e8-e89dc81f9d71",
+      "name": "HU4 HTTP Indeed1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        -1792,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { fuente: 'Indeed', titulo: 'Ejemplo', link: 'demo' } }];"
+      },
+      "id": "fddfe6e2-33ef-48a3-8316-382e739dea82",
+      "name": "HU4 Parse Indeed1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        -112
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "7866986f-7c3e-4769-a4fe-bde2823555e7",
+      "name": "HU4 Merge Results1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        -1296,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicas@gmail.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "=",
+        "options": {}
+      },
+      "id": "8655c09c-cdab-4cf4-a33a-e1cc0191ba98",
+      "name": "HU4 Send Email1",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -800,
+        -16
+      ],
+      "webhookId": "dbb21825-ec32-497f-8f23-be25885348cd",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 808930077,
+          "mode": "list",
+          "cachedResultName": "LimitesReportes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=808930077"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $('HU4 - Form Trigger').first().json.Email }}",
+            "mes": "={{ $now.format('yyyy-MM') }}",
+            "limite": "={{ $('HU13 - Get Límite (HU4)').first().json.limite }}",
+            "usados": "={{ $json.usados_nuevo }}",
+            "actualizado_ts": "={{ $now }}\n"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "limite",
+              "displayName": "limite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "usados",
+              "displayName": "usados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mes",
+              "displayName": "mes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "actualizado_ts",
+              "displayName": "actualizado_ts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "836a6fc3-5c3a-44a0-8ab9-a95901b28f76",
+      "name": "HU13 - Incrementar Consumo1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -352,
+        -16
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://r.jina.ai/https://www.laborum.cl/empleos-busqueda-practica-informatica.html",
+        "allowUnauthorizedCerts": true,
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "0d29113b-91d1-4284-a0b1-4a7860e81d50",
+      "name": "HU4 HTTP Laborum1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        -1792,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSER LABORUM v8 - Limpieza avanzada ===\nconst raw = $json.data || $json.body || \"\";\nconst text = String(raw).replace(/\\r/g, \"\").trim();\n\n// --- Expresión más flexible ---\nconst regex = /\\[(?:Nuevo|Actualizado|\\#\\#\\#)?[^\\]]*?(Práctica[^\\#\\n]+|Alumno en Práctica[^\\#\\n]*)[^\\]]*?\\#\\#\\#\\s*([A-ZÁÉÍÓÚÑÜ][^\\#\\n]+?)\\s*(?:\\#\\#\\#\\s*([^#\\n]+?))?\\s*\\#\\#\\#\\s*(Presencial|Remoto|Híbrido)[^\\]]*\\]\\((https:\\/\\/www\\.laborum\\.cl\\/empleos\\/[^\\)]+)\\)/gi;\n\nconst out = [];\nlet match;\n\nwhile ((match = regex.exec(text))) {\n  let titulo   = (match[1] || \"\").replace(/[-–—]+/g, \"\").trim();\n  let empresa  = (match[2] || \"\").trim();\n  let region   = (match[3] || \"\").trim();\n  let modalidad= (match[4] || \"\").trim() || \"Presencial\";\n  let link     = (match[5] || \"\").trim();\n\n  // --- LIMPIEZA ---\n  // 1. Eliminar Markdown residual e imágenes\n  empresa = empresa.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n  region  = region.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n  titulo  = titulo.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n\n  // 2. Si empresa contiene \"Región\", intercambiar\n  if (/Región/i.test(empresa)) {\n    region = empresa;\n    empresa = \"Sin empresa\";\n  }\n\n  // 3. Si región está vacía o sin \"Región\", intentar buscar dentro del bloque\n  if (!/Región/i.test(region)) {\n    const m = empresa.match(/([A-ZÁÉÍÓÚÑÜa-zñü\\s]+,\\s*Región\\s*[A-ZÁÉÍÓÚÑÜIVX]+)/);\n    if (m) {\n      region = m[1].trim();\n      empresa = empresa.replace(m[0], \"\").trim();\n    }\n  }\n\n  // 4. Recortar empresa si es descripción larga\n  if (empresa.split(/\\s+/).length > 6) {\n    empresa = empresa\n      .replace(/Somos.*|Compañía.*|Empresa.*|holding.*|S\\.A\\..*|Sociedad.*|Limitada.*|con.*|del.*|la.*|los.*|las.*|de.*$/gi, \"\")\n      .trim();\n  }\n\n  // 5. Limpieza final\n  empresa = empresa.replace(/[,.-]+$/g, \"\").trim();\n  region  = region.replace(/^Región\\s*/i, \"\").trim() || \"Sin región\";\n  titulo  = titulo.replace(/-{2,}|={2,}/g, \"\").trim();\n\n  if (link) {\n    out.push({\n      fuente: \"Laborum\",\n      titulo,\n      empresa: empresa || \"Sin empresa\",\n      region,\n      modalidad,\n      link\n    });\n  }\n}\n\n// --- Fallback mínimo ---\nif (out.length === 0) {\n  const altRegex = /\\[\\s*(Práctica[^\\#\\n]+|Alumno en Práctica[^\\#\\n]*)[^\\]]*\\]\\((https:\\/\\/www\\.laborum\\.cl\\/empleos\\/[^\\)]+)\\)/gi;\n  let m;\n  while ((m = altRegex.exec(text))) {\n    out.push({\n      fuente: \"Laborum\",\n      titulo: (m[1] || \"\").trim(),\n      empresa: \"Sin empresa\",\n      region: \"Sin región\",\n      modalidad: \"Presencial\",\n      link: m[2]\n    });\n  }\n}\n\n// --- Eliminar duplicados ---\nconst unicos = out.filter((v, i, a) => a.findIndex(t => t.link === v.link) === i);\n\nreturn unicos.length\n  ? unicos.map(x => ({ json: x }))\n  : [{ json: { fuente: \"Laborum\", mensaje: \"Sin resultados válidos\", total: 0 } }];\n"
+      },
+      "id": "931a3096-576a-4c16-8c8d-1d0271908f60",
+      "name": "HU4 Parse Laborum1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "HU4 - Reporte Inmediato - Integrada con HU13",
+        "height": 80,
+        "width": 304,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3744,
+        -176
+      ],
+      "id": "b1aa533f-eb94-4a79-b491-0351571bc8ef",
+      "name": "Sticky Note",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const limiteRow = $items('HU13 - Get Límite (HU4)')[0].json;\nconst consumoRow = $items('HU13 - Get Consumo Actual(HU4)')[0].json;\n\nconst limite = Number(limiteRow.limite || 0);\nconst usados = Number(consumoRow.usados || 0);\n\nreturn [{\n  exceeded: usados >= limite,\n  limite,\n  usados\n}];\n"
+      },
+      "id": "9617c61b-f632-4fa9-8a46-19a5221ffd2a",
+      "name": "HU13 - IF excede límite? (HU4)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2752,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?pli=1&gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "estado",
+              "lookupValue": "=ACTIVA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2320,
+        64
+      ],
+      "id": "a9525c3d-aae4-423a-a043-16d7c2037b49",
+      "name": "Obtener Preferencias(HU4)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 808930077,
+          "mode": "list",
+          "cachedResultName": "LimitesReportes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=808930077"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d34744eb-5ae9-43f0-a29c-ffb1abbbda4d",
+      "name": "HU13 - Get Consumo Actual(HU4)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -2976,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos desde los nodos anteriores\nconst limiteRow = $items('HU13 - Get Límite (HU4)')[0].json;\nconst consumoRow = $items('HU13 - Get Consumo Actual(HU4)')[0].json;\nconst emailRow = $items('Normalizar email HU4')[0].json;\n\n// Convertir valores\nconst limite = Number(limiteRow.limite || 0);\nconst usados_actual = Number(consumoRow.usados || 0);\n\n// Incremento\nconst usados_nuevo = usados_actual + 1;\n\n// Mes actual YYYY-MM\nconst mes = new Date().toISOString().slice(0, 7);\n\n// Timestamp\nconst actualizado_ts = new Date().toISOString();\n\n// Devolver un único item limpio\nreturn [\n  {\n    email: emailRow.email,\n    limite,\n    usados_actual,\n    usados_nuevo,\n    mes,\n    actualizado_ts\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        -16
+      ],
+      "id": "c65a09b6-9174-4f31-818f-eb1e2bf8ddda",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 808930077,
+          "mode": "list",
+          "cachedResultName": "LimitesReportes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=808930077"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $('HU4 - Form Trigger').item.json.Email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "616ef760-c6eb-45f7-be83-cf63ab4f78cf",
+      "name": "HU13 - Get Límite (HU4)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -3232,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HU4 HTTP Santander": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Santander",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 - Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalizar email HU4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar email HU4": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Get Límite (HU4)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - IF (exceeded?)": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Mensaje Límite Alcanzado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener Preferencias(HU4)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 - Build Query": {
+      "main": [
+        [
+          {
+            "node": "HU4 HTTP Indeed1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HU4 HTTP Laborum1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 - Build HTML": {
+      "main": [
+        [
+          {
+            "node": "HU4 Send Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 HTTP Indeed1": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Indeed1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Parse Indeed1": {
+      "main": [
+        [
+          {
+            "node": "HU4 Merge Results1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Merge Results1": {
+      "main": [
+        [
+          {
+            "node": "HU4 - Build HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Send Email1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 HTTP Laborum1": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Laborum1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Parse Laborum1": {
+      "main": [
+        [
+          {
+            "node": "HU4 Merge Results1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HU13 - IF excede límite? (HU4)": {
+      "main": [
+        [
+          {
+            "node": "HU13 - IF (exceeded?)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Preferencias(HU4)": {
+      "main": [
+        [
+          {
+            "node": "HU4 - Build Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - Get Consumo Actual(HU4)": {
+      "main": [
+        [
+          {
+            "node": "HU13 - IF excede límite? (HU4)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Incrementar Consumo1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - Get Límite (HU4)": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Get Consumo Actual(HU4)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d5e2027a-eeac-4c71-b3fa-823d8f50d09b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49182ba69a2f30f291f54966c1f37e36be55c887865edaddf2d63e89079d22d9"
+  },
+  "id": "Ps7xtICc7HYZNKxc",
+  "tags": []
+}
