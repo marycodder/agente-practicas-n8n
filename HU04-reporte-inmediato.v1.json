@@ -1,0 +1,400 @@
+{
+  "name": "HU4_ReporteInmediato",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    email: String($json.email || $json.Email || '').trim()\n  }\n}];\n"
+      },
+      "id": "a19dfcbb-2d78-427c-bd88-e2dd50a4aca3",
+      "name": "Normalizar HU4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "combineFilters": "AND",
+        "options": {}
+      },
+      "id": "4ad1fa5c-9d67-4bd0-9617-55bcd34b5fb2",
+      "name": "HU4 Obtener Preferencias",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -688,
+        128
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const u = $json;\nreturn [{\n  json: {\n    email: u.Email,\n    region: u[\"Región\"],\n    modalidad: u[\"Modalidad\"],\n    q: \"práctica informática\"\n  }\n}];"
+      },
+      "id": "86b9d7c1-4100-435d-af29-89cb7fde35db",
+      "name": "HU4 Build Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.scraperapi.com?api_key=d837bd9aef43a8ad236815beb2ee184a&url=https://cl.indeed.com/jobs?q=práctica+informática&render=true&premium=true",
+        "responseFormat": "string",
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)              AppleWebKit/537.36 (KHTML, like Gecko)              Chrome/118.0.5993.118 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "es-CL,es;q=0.9,en;q=0.8"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+            }
+          ]
+        }
+      },
+      "id": "9fcff6a0-9a0a-4e92-a752-9eb9fd5b1846",
+      "name": "HU4 HTTP Indeed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://r.jina.ai/https://www.laborum.cl/empleos-busqueda-practica-informatica.html",
+        "allowUnauthorizedCerts": true,
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "3c386c77-45c3-49f9-99f7-63da72f50377",
+      "name": "HU4 HTTP Laborum",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://empleos.santander.cl/app/minisite/site/_search",
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "bodyParametersJson": "=={{ {\n  from: 0,\n  size: $json.tamano || 25,\n  query: {\n    simple_query_string: { query: $json.q || '' }\n  }\n} }}",
+        "headerParametersJson": "=={{ {\n  \"User-Agent\": \"Mozilla/5.0\",\n  \"Accept-Language\": \"es-CL,es;q=0.9\",\n  \"Content-Type\": \"application/json\",\n  \"Accept\": \"application/json,*/*\"\n} }}\n"
+      },
+      "id": "b3970292-b82a-4af1-8416-66895adb53f9",
+      "name": "HU4 HTTP Santander",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSER INDEED v16 (desescapa \\ y busca correctamente empresa y región) ===\nlet html = $json.data ?? $json.body ?? \"\";\nconst jobs = [];\n\n// 1️⃣ Limpieza agresiva\nhtml = html\n  .replace(/\\\\n/g, \" \")   // eliminar saltos de línea escapados\n  .replace(/\\\\t/g, \" \")\n  .replace(/\\\\r/g, \" \")\n  .replace(/\\\\\"/g, '\"')   // arreglar comillas escapadas\n  .replace(/\\\\\\\\/g, \"\\\\\") // limpiar dobles barras\n  .replace(/\\s+/g, \" \");\n\n// 2️⃣ Dividir por cada oferta detectando <a ... data-jk o <div ... data-jk\nconst bloques = html.split(/<[^>]+data-jk=\"/).slice(1);\n\nfor (const b of bloques) {\n  const bloque = '<div data-jk=\"' + b; // reconstruir bloque\n  const titulo =\n    (bloque.match(/title=\"([^\"]+)\"/i) ||\n      bloque.match(/<span[^>]*id=\"jobTitle[^\"]*\"[^>]*>(.*?)<\\/span>/i) ||\n      [])[1]\n      ?.replace(/<[^>]+>/g, \"\")\n      ?.trim() || \"\";\n\n  let link = (bloque.match(/href=\"([^\"]+)\"/i) || [])[1] || \"\";\n  if (link && !link.startsWith(\"http\")) link = `https://cl.indeed.com${link}`;\n\n  const empresa =\n    (bloque.match(/data-testid=\"company-name\"[^>]*>([^<]+)</i) || [])[1]?.trim() ||\n    (bloque.match(/cmp=([^\"&]+)/i) || [])[1]?.replace(/-/g, \" \") ||\n    \"Sin empresa\";\n\n  const region =\n    (bloque.match(/data-testid=\"text-location\"[^>]*>([^<]+)</i) || [])[1]?.trim() ||\n    \"Sin región\";\n\n  const modalidad =\n    /remot/i.test(region)\n      ? \"Remoto\"\n      : /híbrid/i.test(region)\n      ? \"Híbrido\"\n      : \"Presencial\";\n\n  if (titulo) {\n    jobs.push({\n      fuente: \"Indeed\",\n      titulo,\n      empresa,\n      region,\n      modalidad,\n      link,\n    });\n  }\n}\n\n// 3️⃣ Salida\nif (jobs.length === 0) {\n  return [{ json: { mensaje: \"No se extrajeron ofertas válidas\", total: 0 } }];\n}\n\nreturn jobs.map((x) => ({ json: x }));\n"
+      },
+      "id": "eafe1615-2354-489b-8cef-fb8ba4408e60",
+      "name": "HU4 Parse Indeed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSER LABORUM v8 - Limpieza avanzada ===\nconst raw = $json.data || $json.body || \"\";\nconst text = String(raw).replace(/\\r/g, \"\").trim();\n\n// --- Expresión más flexible ---\nconst regex = /\\[(?:Nuevo|Actualizado|\\#\\#\\#)?[^\\]]*?(Práctica[^\\#\\n]+|Alumno en Práctica[^\\#\\n]*)[^\\]]*?\\#\\#\\#\\s*([A-ZÁÉÍÓÚÑÜ][^\\#\\n]+?)\\s*(?:\\#\\#\\#\\s*([^#\\n]+?))?\\s*\\#\\#\\#\\s*(Presencial|Remoto|Híbrido)[^\\]]*\\]\\((https:\\/\\/www\\.laborum\\.cl\\/empleos\\/[^\\)]+)\\)/gi;\n\nconst out = [];\nlet match;\n\nwhile ((match = regex.exec(text))) {\n  let titulo   = (match[1] || \"\").replace(/[-–—]+/g, \"\").trim();\n  let empresa  = (match[2] || \"\").trim();\n  let region   = (match[3] || \"\").trim();\n  let modalidad= (match[4] || \"\").trim() || \"Presencial\";\n  let link     = (match[5] || \"\").trim();\n\n  // --- LIMPIEZA ---\n  // 1. Eliminar Markdown residual e imágenes\n  empresa = empresa.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n  region  = region.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n  titulo  = titulo.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n\n  // 2. Si empresa contiene \"Región\", intercambiar\n  if (/Región/i.test(empresa)) {\n    region = empresa;\n    empresa = \"Sin empresa\";\n  }\n\n  // 3. Si región está vacía o sin \"Región\", intentar buscar dentro del bloque\n  if (!/Región/i.test(region)) {\n    const m = empresa.match(/([A-ZÁÉÍÓÚÑÜa-zñü\\s]+,\\s*Región\\s*[A-ZÁÉÍÓÚÑÜIVX]+)/);\n    if (m) {\n      region = m[1].trim();\n      empresa = empresa.replace(m[0], \"\").trim();\n    }\n  }\n\n  // 4. Recortar empresa si es descripción larga\n  if (empresa.split(/\\s+/).length > 6) {\n    empresa = empresa\n      .replace(/Somos.*|Compañía.*|Empresa.*|holding.*|S\\.A\\..*|Sociedad.*|Limitada.*|con.*|del.*|la.*|los.*|las.*|de.*$/gi, \"\")\n      .trim();\n  }\n\n  // 5. Limpieza final\n  empresa = empresa.replace(/[,.-]+$/g, \"\").trim();\n  region  = region.replace(/^Región\\s*/i, \"\").trim() || \"Sin región\";\n  titulo  = titulo.replace(/-{2,}|={2,}/g, \"\").trim();\n\n  if (link) {\n    out.push({\n      fuente: \"Laborum\",\n      titulo,\n      empresa: empresa || \"Sin empresa\",\n      region,\n      modalidad,\n      link\n    });\n  }\n}\n\n// --- Fallback mínimo ---\nif (out.length === 0) {\n  const altRegex = /\\[\\s*(Práctica[^\\#\\n]+|Alumno en Práctica[^\\#\\n]*)[^\\]]*\\]\\((https:\\/\\/www\\.laborum\\.cl\\/empleos\\/[^\\)]+)\\)/gi;\n  let m;\n  while ((m = altRegex.exec(text))) {\n    out.push({\n      fuente: \"Laborum\",\n      titulo: (m[1] || \"\").trim(),\n      empresa: \"Sin empresa\",\n      region: \"Sin región\",\n      modalidad: \"Presencial\",\n      link: m[2]\n    });\n  }\n}\n\n// --- Eliminar duplicados ---\nconst unicos = out.filter((v, i, a) => a.findIndex(t => t.link === v.link) === i);\n\nreturn unicos.length\n  ? unicos.map(x => ({ json: x }))\n  : [{ json: { fuente: \"Laborum\", mensaje: \"Sin resultados válidos\", total: 0 } }];\n"
+      },
+      "id": "28baace2-a5e4-4856-bcb5-52c5eb33bfb1",
+      "name": "HU4 Parse Laborum",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Soporta JSON (hits.hits) o respuesta String (intenta parsear; fallback HTML)\nlet text = $json.data ?? $json.body ?? null;\nlet hits = [];\n\nif (typeof text === \"string\") {\n  let t = text.trim();\n  if (t.startsWith(\")]}'\")) t = t.slice(4).trim(); // anti-XSSI\n  try { const js = JSON.parse(t); hits = js?.hits?.hits || []; } catch {}\n} else if ($json?.hits?.hits) {\n  hits = $json.hits.hits;\n}\n\nif (!hits.length) {\n  // Fallback: intentar raspar enlaces si fue HTML\n  const html = typeof text === \"string\" ? text : \"\";\n  const re = /<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)<\\/a>/gi;\n  const alt = [];\n  let m; \n  while ((m = re.exec(html)) && alt.length < 25) {\n    const link = m[1];\n    const titulo = (m[2] || \"\").replace(/<[^>]+>/g, \"\").trim();\n    if (titulo && link) alt.push({ fuente:\"Santander\", titulo, link, region:\"Sin región\", modalidad:\"Presencial\" });\n  }\n  return alt.length ? alt.map(x => ({ json: x })) \n                    : [{ json: { fuente: \"Santander\", mensaje: \"Sin resultados o respuesta no JSON\" } }];\n}\n\nconst out = hits.map(h => {\n  const s = h._source || h;\n  const titulo = s?.title || \"Sin título\";\n  const link = s?.applyUrl || s?.url || \"\";\n  const region = (s?.location && (s.location.display_name || s.location.city)) || s?.city || \"Sin región\";\n  const modalidad = /remot/i.test(((s?.modality || \"\") + \" \" + region)) ? \"Remoto\" : \"Presencial\";\n  return { fuente: \"Santander\", titulo, link, region, modalidad };\n});\n\nreturn out.map(x => ({ json: x }));\n"
+      },
+      "id": "80863144-44c8-4259-9cc2-e24badaa72a7",
+      "name": "HU4 Parse Santander",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        336
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "7460db57-1760-4a7d-81b0-2caf87269dd6",
+      "name": "HU4 Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        512,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function esc(s){\n  return String(s ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[m]));\n}\n\n// Ofertas unificadas desde parsers\nconst ofertas = items\n  .map(i => i.json || {})\n  .filter(o => o && (o.titulo || o.title || o.nombre || o.link || o.url));\n\nconst filas = ofertas.map((o, i) => ({\n  idx: i + 1,\n  titulo: o.titulo || o.title || o.nombre || 'Sin título',\n  empresa: o.empresa || o.company || o.organizacion || 'Sin empresa',\n  fuente: o.fuente || o.source || o.origen || 'desconocida',\n  region: o.region || o.ubicacion || o.location || 'Sin región',\n  link: o.link || o.url || o.href || ''\n}));\n\n// Preferencias del usuario desde HU4 Build Query\nlet prefs = {};\ntry {\n  prefs = $items('HU4 Build Query', 0, 0).json || {};\n} catch (e) {\n  prefs = {};\n}\n\nconst emailTo   = String($('Normalizar HU4').first().json.email || '').trim();\nconst region    = prefs.region || 'No especificada';\nconst modalidad = prefs.modalidad || 'No especificada';\nconst palabra   = prefs.q || 'práctica informática';\n\nlet rowsHtml = filas.map(r => `\n  <tr>\n    <td style=\"text-align:center;color:#555;\">${r.idx}</td>\n    <td style=\"font-weight:500;\">${esc(r.titulo)}</td>\n    <td style=\"color:#444;\">${esc(r.empresa)}</td>\n    <td style=\"color:#777;\">${esc(r.fuente)}</td>\n    <td style=\"text-align:center;\">\n      ${r.link ? `<a href=\"${esc(r.link)}\" target=\"_blank\" style=\"color:#2563eb;text-decoration:none;\">Ver oferta</a>` : ''}\n    </td>\n  </tr>\n`).join('');\n\nif (!rowsHtml) {\n  rowsHtml = '<tr><td colspan=\"5\" style=\"text-align:center;padding:16px;color:#888;\">Sin resultados para esta búsqueda</td></tr>';\n}\n\nconst total = filas.length;\n\nconst html = `\n<div style=\"font-family:'Segoe UI',Arial,sans-serif;max-width:900px;margin:auto;background:#f9fafb;border-radius:8px;overflow:hidden;\">\n  <div style=\"background:#2563eb;color:white;padding:16px 20px;\">\n    <h2 style=\"margin:0;font-weight:600;\">Reporte inmediato de prácticas</h2>\n    <p style=\"margin:4px 0 0;font-size:14px;\">Total encontrados: <b>${total}</b></p>\n  </div>\n  <div style=\"padding:20px 24px;\">\n    <p style=\"margin:0 0 8px;font-size:14px;color:#374151;\">\n      <b>Región:</b> ${$('HU4 Obtener Preferencias').first().json[\"Región\"] }<br>\n      <b>Modalidad:</b> ${$('HU4 Obtener Preferencias').first().json.Modalidad}<br>\n      <b>Palabra clave:</b> ${esc(palabra)}\n    </p>\n    <table border=\"0\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;margin-top:10px;background:white;border:1px solid #e5e7eb;\">\n      <thead style=\"background:#f3f4f6;\">\n        <tr>\n          <th style=\"text-align:center;\">#</th>\n          <th style=\"text-align:left;\">Título</th>\n          <th style=\"text-align:left;\">Empresa</th>\n          <th style=\"text-align:left;\">Fuente</th>\n          <th style=\"text-align:center;\">Link</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${rowsHtml}\n      </tbody>\n    </table>\n    <p style=\"margin-top:16px;font-size:12px;color:#6b7280;text-align:center;\">\n      Correo generado automáticamente por n8n (HU4 - reporte inmediato).\n    </p>\n  </div>\n</div>`;\n\nconst subject = total > 0\n  ? `Reporte inmediato: ${total} prácticas encontradas`\n  : `Reporte inmediato: sin resultados`;\n\nreturn [{\n  json: {\n    email: emailTo,\n    html,\n    subject,\n    total\n  }\n}];"
+      },
+      "id": "cb5b585d-e905-42ce-8055-717b84365748",
+      "name": "HU4 Build HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicas@gmail.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "141ac419-1308-497f-bab0-fd3fee706104",
+      "name": "HU4 Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        128
+      ],
+      "webhookId": "0b196d70-e00f-4efd-8f30-0a94886b181f",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Solicitud de reporte inmediato",
+        "formDescription": "Se enviará un reporte inmediato usando tus preferencias guardadas en el sistema.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "placeholder": "ej: nombre.apellido@gmail.com",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -1168,
+        128
+      ],
+      "id": "5ae4e187-21e3-4f04-bdc3-ea312dbffc7f",
+      "name": "On form submission1",
+      "webhookId": "7ace9846-6220-47d0-9b42-5e90c3cf97be"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Normalizar HU4": {
+      "main": [
+        [
+          {
+            "node": "HU4 Obtener Preferencias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Obtener Preferencias": {
+      "main": [
+        [
+          {
+            "node": "HU4 Build Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Build Query": {
+      "main": [
+        [
+          {
+            "node": "HU4 HTTP Indeed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HU4 HTTP Laborum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 HTTP Indeed": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Indeed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 HTTP Laborum": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Laborum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 HTTP Santander": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Santander",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Parse Indeed": {
+      "main": [
+        [
+          {
+            "node": "HU4 Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Parse Laborum": {
+      "main": [
+        [
+          {
+            "node": "HU4 Merge Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HU4 Merge Results": {
+      "main": [
+        [
+          {
+            "node": "HU4 Build HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Build HTML": {
+      "main": [
+        [
+          {
+            "node": "HU4 Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission1": {
+      "main": [
+        [
+          {
+            "node": "Normalizar HU4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "16c417ad-b949-4da8-8f1d-822e09b4ff7d",
+  "meta": {
+    "instanceId": "49182ba69a2f30f291f54966c1f37e36be55c887865edaddf2d63e89079d22d9"
+  },
+  "id": "OFb6rKpMYi0P1Hl4",
+  "tags": []
+}
