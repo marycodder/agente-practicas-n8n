@@ -1,5 +1,5 @@
 # 🧠 Agente Buscador de Prácticas Informáticas  
-### Proyecto Técnico en n8n — *Versión sin Webhooks*
+### Proyecto Técnico en n8n
 
 ---
 
