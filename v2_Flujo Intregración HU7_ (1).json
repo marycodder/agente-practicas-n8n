@@ -1,0 +1,242 @@
+{
+  "name": "v2_Flujo Intregración HU7_",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "hu7-historial",
+        "formTitle": "Consulta de Historial de Reportes",
+        "formDescription": "Ingresa tu correo para ver todas las fechas donde recibiste reportes.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "df42d65d-75ab-4daa-8ffc-5233af920a31",
+      "name": "HU7 - Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        208
+      ],
+      "webhookId": "de4914be-b14a-4b5e-9b57-893a08ffa78d"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    email: String($input.first().json.Email || '').trim().toLowerCase(),\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "0d8665ba-dac6-4fb9-a472-58260fc9ca6f",
+      "name": "HU7 - Procesar Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 51153146,
+          "mode": "list",
+          "cachedResultName": "CantReporte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=51153146"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a0115cb4-16eb-4b9d-a181-5ff411b570cc",
+      "name": "HU7 - Obtener Historial",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        -80,
+        208
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = items.map(i => i.json);\n\n// Verificar si el array 'rows' está vacío o contiene solo objetos vacíos\nlet tabla = \"\";\n\nif (!rows || rows.length === 0 || (rows.length === 1 && Object.keys(rows[0]).length === 0)) {\n  // Si no hay registros, mostrar mensaje adecuado\n  tabla = `<p style=\"color:#555;\">No se encontraron registros para el correo proporcionado.</p>`;\n} else {\n  // Si hay registros, generar la tabla con los datos\n  tabla = `\n    <table style=\"width:100%; border-collapse: collapse; margin-top: 10px;\">\n      <thead>\n        <tr style=\"background:#f0f0f0; text-align:left;\">\n          <th style=\"padding:8px; border-bottom:1px solid #ccc;\">Fecha</th>\n          <th style=\"padding:8px; border-bottom:1px solid #ccc;\">Tipo</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${\n          rows.map(r => `\n            <tr>\n              <td style=\"padding:8px; border-bottom:1px solid #eee;\">${r.timestamp}</td>\n              <td style=\"padding:8px; border-bottom:1px solid #eee;\">${r.tipo}</td>\n            </tr>\n          `).join(\"\")\n        }\n      </tbody>\n    </table>\n  `;\n}\n\nconst cuerpo = `\n  <div style=\"font-family:Arial, sans-serif; line-height:1.5; color:#333;\">\n    <h2 style=\"color:#2d6cdf;\">Historial de Reportes</h2>\n    <p>Hola,</p>\n\n    <p>Aquí tienes el listado completo de tus reportes enviados:</p>\n\n    ${tabla}\n\n    <br>\n    <p>Saludos,<br>\n    <strong>Agente de Reportes Automatizados</strong></p>\n  </div>\n`;\n\nreturn [{ json: { cuerpo } }];\n"
+      },
+      "id": "caf64d9f-e773-41ad-b5bd-7c1f0415906c",
+      "name": "HU7 - Formatear Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('HU7 - Form Trigger').first().json.Email }}",
+        "subject": "Historial de Reportes",
+        "text": "=",
+        "html": "={{$json.cuerpo}}",
+        "options": {}
+      },
+      "id": "c03d5fe9-e9a5-4fcc-aa4a-981bdc903225",
+      "name": "HU7 - Enviar Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        320,
+        208
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "HU7 - Visualizar Reportes\n",
+        "height": 80,
+        "width": 262
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        64
+      ],
+      "id": "db326761-1e17-46d1-a81e-be5a020eb420",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 51153146,
+          "mode": "list",
+          "cachedResultName": "CantReporte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=51153146"
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "timestamp",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "=  {{ $('Split In Batches1').first().json.email }}"
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "=Programado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "33d07345-00f5-489b-bcd7-71c940671544",
+      "name": "HU7 - Registrar Consulta2",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HU7 - Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Procesar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU7 - Procesar Email": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Obtener Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU7 - Obtener Historial": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Formatear Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU7 - Formatear Respuesta": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Enviar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a90dcea8-63d9-49ea-b687-3669682a85b1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49182ba69a2f30f291f54966c1f37e36be55c887865edaddf2d63e89079d22d9"
+  },
+  "id": "Ps7xtICc7HYZNKxc",
+  "tags": []
+}
