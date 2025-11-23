@@ -1,0 +1,233 @@
+{
+  "name": "Flujo Intregración HU7",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "hu7-historial",
+        "formTitle": "Consulta de Historial de Reportes",
+        "formDescription": "Ingresa tu correo para ver todas las fechas donde recibiste reportes.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5aae907b-ae8b-4599-8749-53ac9bd735a1",
+      "name": "HU7 - Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        240
+      ],
+      "webhookId": "de4914be-b14a-4b5e-9b57-893a08ffa78d"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    email: String($json.email || '').trim().toLowerCase(),\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "7fadba2f-dc77-4bc1-abdd-6a9e09bdb56e",
+      "name": "HU7 - Procesar Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 51153146,
+          "mode": "list",
+          "cachedResultName": "CantReporte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=51153146"
+        },
+        "options": {}
+      },
+      "id": "9ebc461f-c2c4-4178-b03a-fa54361688ca",
+      "name": "HU7 - Obtener Historial",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        -272,
+        240
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = items.map(i => i.json);\n\nlet tabla = \"\";\n\nif (rows.length === 0) {\n  tabla = `<p style=\"color:#555;\">Sin registros</p>`;\n} else {\n  tabla = `\n    <table style=\"width:100%; border-collapse: collapse; margin-top: 10px;\">\n      <thead>\n        <tr style=\"background:#f0f0f0; text-align:left;\">\n          <th style=\"padding:8px; border-bottom:1px solid #ccc;\">Fecha</th>\n          <th style=\"padding:8px; border-bottom:1px solid #ccc;\">Tipo</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${\n          rows.map(r => `\n            <tr>\n              <td style=\"padding:8px; border-bottom:1px solid #eee;\">${r.timestamp}</td>\n              <td style=\"padding:8px; border-bottom:1px solid #eee;\">${r.tipo}</td>\n            </tr>\n          `).join(\"\")\n        }\n      </tbody>\n    </table>\n  `;\n}\n\nconst cuerpo = `\n  <div style=\"font-family:Arial, sans-serif; line-height:1.5; color:#333;\">\n    <h2 style=\"color:#2d6cdf;\">Historial de Reportes</h2>\n    <p>Hola,</p>\n\n    <p>Aquí tienes el listado completo de tus reportes enviados:</p>\n\n    ${tabla}\n\n    <br>\n    <p>Saludos,<br>\n    <strong>Agente de Reportes Automatizados</strong></p>\n  </div>\n`;\n\nreturn [{ json: { cuerpo } }];\n"
+      },
+      "id": "30a8e8e3-6a27-4c73-85e8-dfbc142ecd41",
+      "name": "HU7 - Formatear Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('HU7 - Form Trigger').item.json.Email }}",
+        "subject": "Historial de Reportes",
+        "text": "=",
+        "html": "={{$json.cuerpo}}",
+        "options": {}
+      },
+      "id": "b0ac66cd-f63a-4f92-8864-d85a2aa91511",
+      "name": "HU7 - Enviar Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        144,
+        240
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "HU7 - Visualizar Reportes\n",
+        "height": 80,
+        "width": 262
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        96
+      ],
+      "id": "0b0a81bd-c374-4d10-baef-fc9d99c974e4",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 51153146,
+          "mode": "list",
+          "cachedResultName": "CantReporte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=51153146"
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "timestamp",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "=  {{ $('Split In Batches1').first().json.email }}"
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "=Programado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "068a90c4-0cdc-4307-8808-41dfb9a2f537",
+      "name": "HU7 - Registrar Consulta2",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        -160,
+        32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HU7 - Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Procesar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU7 - Procesar Email": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Obtener Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU7 - Obtener Historial": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Formatear Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU7 - Formatear Respuesta": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Enviar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5f9c65dd-f719-4b57-a99f-bcb00d7465ef",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49182ba69a2f30f291f54966c1f37e36be55c887865edaddf2d63e89079d22d9"
+  },
+  "id": "Ps7xtICc7HYZNKxc",
+  "tags": []
+}
