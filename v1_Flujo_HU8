@@ -1,0 +1,2706 @@
+{
+  "name": "Flujo hasta hu8",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    email: String($json.email || $json.Email || '').trim()\n  }\n}];\n"
+      },
+      "id": "220c6cd9-3e5e-4b51-ad4e-50d934006376",
+      "name": "Normalizar HU4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "combineFilters": "AND",
+        "options": {}
+      },
+      "id": "02c3b044-7380-401b-8ff2-4769d1f68f74",
+      "name": "HU4 Obtener Preferencias",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1232,
+        1696
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const u = $json;\nreturn [{\n  json: {\n    email: u.Email,\n    region: u[\"Región\"],\n    modalidad: u[\"Modalidad\"],\n    q: \"práctica informática\"\n  }\n}];"
+      },
+      "id": "262a8c70-9eb0-4790-b57e-d2aef9ff6cf0",
+      "name": "HU4 Build Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.scraperapi.com?api_key=d837bd9aef43a8ad236815beb2ee184a&url=https://cl.indeed.com/jobs?q=práctica+informática&render=true&premium=true",
+        "responseFormat": "string",
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)              AppleWebKit/537.36 (KHTML, like Gecko)              Chrome/118.0.5993.118 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "es-CL,es;q=0.9,en;q=0.8"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+            }
+          ]
+        }
+      },
+      "id": "d25695ae-74fe-4513-b889-3e9c6d1283e3",
+      "name": "HU4 HTTP Indeed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        1552
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://r.jina.ai/https://www.laborum.cl/empleos-busqueda-practica-informatica.html",
+        "allowUnauthorizedCerts": true,
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "dfe7da23-6211-4725-a946-409cf35515c4",
+      "name": "HU4 HTTP Laborum",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        1728
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://empleos.santander.cl/app/minisite/site/_search",
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "bodyParametersJson": "=={{ {\n  from: 0,\n  size: $json.tamano || 25,\n  query: {\n    simple_query_string: { query: $json.q || '' }\n  }\n} }}",
+        "headerParametersJson": "=={{ {\n  \"User-Agent\": \"Mozilla/5.0\",\n  \"Accept-Language\": \"es-CL,es;q=0.9\",\n  \"Content-Type\": \"application/json\",\n  \"Accept\": \"application/json,*/*\"\n} }}\n"
+      },
+      "id": "70d35c4f-ea55-4059-af9f-c1de99e3e523",
+      "name": "HU4 HTTP Santander",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSER INDEED v16 (desescapa \\ y busca correctamente empresa y región) ===\nlet html = $json.data ?? $json.body ?? \"\";\nconst jobs = [];\n\n// 1️⃣ Limpieza agresiva\nhtml = html\n  .replace(/\\\\n/g, \" \")   // eliminar saltos de línea escapados\n  .replace(/\\\\t/g, \" \")\n  .replace(/\\\\r/g, \" \")\n  .replace(/\\\\\"/g, '\"')   // arreglar comillas escapadas\n  .replace(/\\\\\\\\/g, \"\\\\\") // limpiar dobles barras\n  .replace(/\\s+/g, \" \");\n\n// 2️⃣ Dividir por cada oferta detectando <a ... data-jk o <div ... data-jk\nconst bloques = html.split(/<[^>]+data-jk=\"/).slice(1);\n\nfor (const b of bloques) {\n  const bloque = '<div data-jk=\"' + b; // reconstruir bloque\n  const titulo =\n    (bloque.match(/title=\"([^\"]+)\"/i) ||\n      bloque.match(/<span[^>]*id=\"jobTitle[^\"]*\"[^>]*>(.*?)<\\/span>/i) ||\n      [])[1]\n      ?.replace(/<[^>]+>/g, \"\")\n      ?.trim() || \"\";\n\n  let link = (bloque.match(/href=\"([^\"]+)\"/i) || [])[1] || \"\";\n  if (link && !link.startsWith(\"http\")) link = `https://cl.indeed.com${link}`;\n\n  const empresa =\n    (bloque.match(/data-testid=\"company-name\"[^>]*>([^<]+)</i) || [])[1]?.trim() ||\n    (bloque.match(/cmp=([^\"&]+)/i) || [])[1]?.replace(/-/g, \" \") ||\n    \"Sin empresa\";\n\n  const region =\n    (bloque.match(/data-testid=\"text-location\"[^>]*>([^<]+)</i) || [])[1]?.trim() ||\n    \"Sin región\";\n\n  const modalidad =\n    /remot/i.test(region)\n      ? \"Remoto\"\n      : /híbrid/i.test(region)\n      ? \"Híbrido\"\n      : \"Presencial\";\n\n  if (titulo) {\n    jobs.push({\n      fuente: \"Indeed\",\n      titulo,\n      empresa,\n      region,\n      modalidad,\n      link,\n    });\n  }\n}\n\n// 3️⃣ Salida\nif (jobs.length === 0) {\n  return [{ json: { mensaje: \"No se extrajeron ofertas válidas\", total: 0 } }];\n}\n\nreturn jobs.map((x) => ({ json: x }));\n"
+      },
+      "id": "53268a16-2174-4e6c-bb20-8290daf29863",
+      "name": "HU4 Parse Indeed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        1552
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSER LABORUM v8 - Limpieza avanzada ===\nconst raw = $json.data || $json.body || \"\";\nconst text = String(raw).replace(/\\r/g, \"\").trim();\n\n// --- Expresión más flexible ---\nconst regex = /\\[(?:Nuevo|Actualizado|\\#\\#\\#)?[^\\]]*?(Práctica[^\\#\\n]+|Alumno en Práctica[^\\#\\n]*)[^\\]]*?\\#\\#\\#\\s*([A-ZÁÉÍÓÚÑÜ][^\\#\\n]+?)\\s*(?:\\#\\#\\#\\s*([^#\\n]+?))?\\s*\\#\\#\\#\\s*(Presencial|Remoto|Híbrido)[^\\]]*\\]\\((https:\\/\\/www\\.laborum\\.cl\\/empleos\\/[^\\)]+)\\)/gi;\n\nconst out = [];\nlet match;\n\nwhile ((match = regex.exec(text))) {\n  let titulo   = (match[1] || \"\").replace(/[-–—]+/g, \"\").trim();\n  let empresa  = (match[2] || \"\").trim();\n  let region   = (match[3] || \"\").trim();\n  let modalidad= (match[4] || \"\").trim() || \"Presencial\";\n  let link     = (match[5] || \"\").trim();\n\n  // --- LIMPIEZA ---\n  // 1. Eliminar Markdown residual e imágenes\n  empresa = empresa.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n  region  = region.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n  titulo  = titulo.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n\n  // 2. Si empresa contiene \"Región\", intercambiar\n  if (/Región/i.test(empresa)) {\n    region = empresa;\n    empresa = \"Sin empresa\";\n  }\n\n  // 3. Si región está vacía o sin \"Región\", intentar buscar dentro del bloque\n  if (!/Región/i.test(region)) {\n    const m = empresa.match(/([A-ZÁÉÍÓÚÑÜa-zñü\\s]+,\\s*Región\\s*[A-ZÁÉÍÓÚÑÜIVX]+)/);\n    if (m) {\n      region = m[1].trim();\n      empresa = empresa.replace(m[0], \"\").trim();\n    }\n  }\n\n  // 4. Recortar empresa si es descripción larga\n  if (empresa.split(/\\s+/).length > 6) {\n    empresa = empresa\n      .replace(/Somos.*|Compañía.*|Empresa.*|holding.*|S\\.A\\..*|Sociedad.*|Limitada.*|con.*|del.*|la.*|los.*|las.*|de.*$/gi, \"\")\n      .trim();\n  }\n\n  // 5. Limpieza final\n  empresa = empresa.replace(/[,.-]+$/g, \"\").trim();\n  region  = region.replace(/^Región\\s*/i, \"\").trim() || \"Sin región\";\n  titulo  = titulo.replace(/-{2,}|={2,}/g, \"\").trim();\n\n  if (link) {\n    out.push({\n      fuente: \"Laborum\",\n      titulo,\n      empresa: empresa || \"Sin empresa\",\n      region,\n      modalidad,\n      link\n    });\n  }\n}\n\n// --- Fallback mínimo ---\nif (out.length === 0) {\n  const altRegex = /\\[\\s*(Práctica[^\\#\\n]+|Alumno en Práctica[^\\#\\n]*)[^\\]]*\\]\\((https:\\/\\/www\\.laborum\\.cl\\/empleos\\/[^\\)]+)\\)/gi;\n  let m;\n  while ((m = altRegex.exec(text))) {\n    out.push({\n      fuente: \"Laborum\",\n      titulo: (m[1] || \"\").trim(),\n      empresa: \"Sin empresa\",\n      region: \"Sin región\",\n      modalidad: \"Presencial\",\n      link: m[2]\n    });\n  }\n}\n\n// --- Eliminar duplicados ---\nconst unicos = out.filter((v, i, a) => a.findIndex(t => t.link === v.link) === i);\n\nreturn unicos.length\n  ? unicos.map(x => ({ json: x }))\n  : [{ json: { fuente: \"Laborum\", mensaje: \"Sin resultados válidos\", total: 0 } }];\n"
+      },
+      "id": "7d075318-b9ba-4c4d-a535-1880e8a24a3d",
+      "name": "HU4 Parse Laborum",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        1728
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Soporta JSON (hits.hits) o respuesta String (intenta parsear; fallback HTML)\nlet text = $json.data ?? $json.body ?? null;\nlet hits = [];\n\nif (typeof text === \"string\") {\n  let t = text.trim();\n  if (t.startsWith(\")]}'\")) t = t.slice(4).trim(); // anti-XSSI\n  try { const js = JSON.parse(t); hits = js?.hits?.hits || []; } catch {}\n} else if ($json?.hits?.hits) {\n  hits = $json.hits.hits;\n}\n\nif (!hits.length) {\n  // Fallback: intentar raspar enlaces si fue HTML\n  const html = typeof text === \"string\" ? text : \"\";\n  const re = /<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)<\\/a>/gi;\n  const alt = [];\n  let m; \n  while ((m = re.exec(html)) && alt.length < 25) {\n    const link = m[1];\n    const titulo = (m[2] || \"\").replace(/<[^>]+>/g, \"\").trim();\n    if (titulo && link) alt.push({ fuente:\"Santander\", titulo, link, region:\"Sin región\", modalidad:\"Presencial\" });\n  }\n  return alt.length ? alt.map(x => ({ json: x })) \n                    : [{ json: { fuente: \"Santander\", mensaje: \"Sin resultados o respuesta no JSON\" } }];\n}\n\nconst out = hits.map(h => {\n  const s = h._source || h;\n  const titulo = s?.title || \"Sin título\";\n  const link = s?.applyUrl || s?.url || \"\";\n  const region = (s?.location && (s.location.display_name || s.location.city)) || s?.city || \"Sin región\";\n  const modalidad = /remot/i.test(((s?.modality || \"\") + \" \" + region)) ? \"Remoto\" : \"Presencial\";\n  return { fuente: \"Santander\", titulo, link, region, modalidad };\n});\n\nreturn out.map(x => ({ json: x }));\n"
+      },
+      "id": "b43093e8-ba0d-4601-a32d-254a4d4789d3",
+      "name": "HU4 Parse Santander",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        1904
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "ec357d8b-a834-48bc-8477-68686b0353b5",
+      "name": "HU4 Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function esc(s){\n  return String(s ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[m]));\n}\n\n// Ofertas unificadas desde parsers\nconst ofertas = items\n  .map(i => i.json || {})\n  .filter(o => o && (o.titulo || o.title || o.nombre || o.link || o.url));\n\nconst filas = ofertas.map((o, i) => ({\n  idx: i + 1,\n  titulo: o.titulo || o.title || o.nombre || 'Sin título',\n  empresa: o.empresa || o.company || o.organizacion || 'Sin empresa',\n  fuente: o.fuente || o.source || o.origen || 'desconocida',\n  region: o.region || o.ubicacion || o.location || 'Sin región',\n  link: o.link || o.url || o.href || ''\n}));\n\n// Preferencias del usuario desde HU4 Build Query\nlet prefs = {};\ntry {\n  prefs = $items('HU4 Build Query', 0, 0).json || {};\n} catch (e) {\n  prefs = {};\n}\n\nconst emailTo   = String($('Normalizar HU4').first().json.email || '').trim();\nconst region    = prefs.region || 'No especificada';\nconst modalidad = prefs.modalidad || 'No especificada';\nconst palabra   = prefs.q || 'práctica informática';\n\nlet rowsHtml = filas.map(r => `\n  <tr>\n    <td style=\"text-align:center;color:#555;\">${r.idx}</td>\n    <td style=\"font-weight:500;\">${esc(r.titulo)}</td>\n    <td style=\"color:#444;\">${esc(r.empresa)}</td>\n    <td style=\"color:#777;\">${esc(r.fuente)}</td>\n    <td style=\"text-align:center;\">\n      ${r.link ? `<a href=\"${esc(r.link)}\" target=\"_blank\" style=\"color:#2563eb;text-decoration:none;\">Ver oferta</a>` : ''}\n    </td>\n  </tr>\n`).join('');\n\nif (!rowsHtml) {\n  rowsHtml = '<tr><td colspan=\"5\" style=\"text-align:center;padding:16px;color:#888;\">Sin resultados para esta búsqueda</td></tr>';\n}\n\nconst total = filas.length;\n\nconst html = `\n<div style=\"font-family:'Segoe UI',Arial,sans-serif;max-width:900px;margin:auto;background:#f9fafb;border-radius:8px;overflow:hidden;\">\n  <div style=\"background:#2563eb;color:white;padding:16px 20px;\">\n    <h2 style=\"margin:0;font-weight:600;\">Reporte inmediato de prácticas</h2>\n    <p style=\"margin:4px 0 0;font-size:14px;\">Total encontrados: <b>${total}</b></p>\n  </div>\n  <div style=\"padding:20px 24px;\">\n    <p style=\"margin:0 0 8px;font-size:14px;color:#374151;\">\n      <b>Región:</b> ${$('HU4 Obtener Preferencias').first().json[\"Región\"] }<br>\n      <b>Modalidad:</b> ${$('HU4 Obtener Preferencias').first().json.Modalidad}<br>\n      <b>Palabra clave:</b> ${esc(palabra)}\n    </p>\n    <table border=\"0\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;margin-top:10px;background:white;border:1px solid #e5e7eb;\">\n      <thead style=\"background:#f3f4f6;\">\n        <tr>\n          <th style=\"text-align:center;\">#</th>\n          <th style=\"text-align:left;\">Título</th>\n          <th style=\"text-align:left;\">Empresa</th>\n          <th style=\"text-align:left;\">Fuente</th>\n          <th style=\"text-align:center;\">Link</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${rowsHtml}\n      </tbody>\n    </table>\n    <p style=\"margin-top:16px;font-size:12px;color:#6b7280;text-align:center;\">\n      Correo generado automáticamente por n8n (HU4 - reporte inmediato).\n    </p>\n  </div>\n</div>`;\n\nconst subject = total > 0\n  ? `Reporte inmediato: ${total} prácticas encontradas`\n  : `Reporte inmediato: sin resultados`;\n\nreturn [{\n  json: {\n    email: emailTo,\n    html,\n    subject,\n    total\n  }\n}];"
+      },
+      "id": "4a236f3a-cc74-4700-9804-639527d96766",
+      "name": "HU4 Build HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicas@gmail.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "8cff7186-44df-4d1e-98e2-e21318a69f30",
+      "name": "HU4 Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3040,
+        1696
+      ],
+      "webhookId": "0b196d70-e00f-4efd-8f30-0a94886b181f",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Solicitud de reporte inmediato",
+        "formDescription": "Se enviará un reporte inmediato usando tus preferencias guardadas en el sistema.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "placeholder": "ej: nombre.apellido@gmail.com",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        752,
+        1696
+      ],
+      "id": "5aede193-db0c-4a3b-a4a2-ed446bfaed85",
+      "name": "On form submission1",
+      "webhookId": "7ace9846-6220-47d0-9b42-5e90c3cf97be"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1xhrrKc9J4yluGKOtezrDkrAui_L5t-1FaHIoyaPLC8E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1368021364,
+          "mode": "list",
+          "cachedResultName": "Errores",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xhrrKc9J4yluGKOtezrDkrAui_L5t-1FaHIoyaPLC8E/edit#gid=1368021364"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now }}",
+            "email": "={{ $items('Split In Batches1', 0, 0).json.email || $json.email || '' }}",
+            "fuente": "={{ $json.fuente || \"desconocida\" }}",
+            "status": "={{ $json.statusCode || $json.code || \"\" }}",
+            "mensaje": "={{ $json.mensaje || $json.error || \"sin datos\" }}",
+            "preview": "={{ $json | json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fuente",
+              "displayName": "fuente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "preview",
+              "displayName": "preview",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3936,
+        944
+      ],
+      "id": "35a8c425-850e-48ef-902f-408586fe6afb",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        1248
+      ],
+      "id": "31bf117a-bf2f-4789-a1f3-ce15d8bf24a7",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "formTitle": "Sistema automatizado para la búsqueda de prácticas profesionales en Informática",
+        "formDescription": " Este proyecto tiene como objetivo desarrollar un sistema automatizado que facilite la búsqueda y gestión de prácticas profesionales en el área de Informática. La solución permite conectar de manera eficiente a estudiantes con empresas que ofrecen oportunidades de práctica, optimizando el proceso mediante el uso de tecnología y algoritmos de filtrado inteligente.  ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Nombre:",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Apellido:",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email:",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Elije la frecuencia con la cual deseas recibir ofertas:",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "4 Días"
+                  },
+                  {
+                    "option": "15 Días"
+                  },
+                  {
+                    "option": "Cada Semana"
+                  },
+                  {
+                    "option": "Cada Mes"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Modalidad:",
+              "fieldType": "radio",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Remota"
+                  },
+                  {
+                    "option": "Presencial"
+                  },
+                  {
+                    "option": "Híbrido"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Elije la Región en la cual te gustaría centrar tu busqueda:",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Región de Arica y Parinacota (XV) – Capital: Arica"
+                  },
+                  {
+                    "option": "Región de Tarapacá (I) – Capital: Iquique"
+                  },
+                  {
+                    "option": "Región de Antofagasta (II) – Capital: Antofagasta"
+                  },
+                  {
+                    "option": "Región de Atacama (III) – Capital: Copiapó"
+                  },
+                  {
+                    "option": "Región de Coquimbo (IV) – Capital: La Serena"
+                  },
+                  {
+                    "option": "Región de Valparaíso (V) – Capital: Valparaíso"
+                  },
+                  {
+                    "option": "Región Metropolitana de Santiago (RM) – Capital: Santiago"
+                  },
+                  {
+                    "option": "Región del Libertador General Bernardo O’Higgins (VI) – Capital: Rancagua"
+                  },
+                  {
+                    "option": "Región del Maule (VII) – Capital: Talca"
+                  },
+                  {
+                    "option": "Región de Ñuble (XVI) – Capital: Chillán"
+                  },
+                  {
+                    "option": "Región del Biobío (VIII) – Capital: Concepción"
+                  },
+                  {
+                    "option": "Región de La Araucanía (IX) – Capital: Temuco"
+                  },
+                  {
+                    "option": "Región de Los Ríos (XIV) – Capital: Valdivia"
+                  },
+                  {
+                    "option": "Región de Los Lagos (X) – Capital: Puerto Montt"
+                  },
+                  {
+                    "option": "Región de Aysén del General Carlos Ibáñez del Campo (XI) – Capital: Coyhaique"
+                  },
+                  {
+                    "option": "Región de Magallanes y de la Antártica Chilena (XII) – Capital: Punta Arenas"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        528
+      ],
+      "id": "36e6b0a7-62be-4137-b6d1-01c1267d5ffc",
+      "name": "On form submission2",
+      "webhookId": "65e8f343-cd85-423c-a79c-0d9c0a11d4fa",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// === VALIDACIÓN Y NORMALIZACIÓN DE DATOS ===\nconst data = items[0].json;\n\n// 🧹 Normaliza y limpia los nombres de campos del formulario\nconst nuevo = {\n  Nombre: data[\"Nombre\"] || data[\"Nombre:\"] || data[\"nombre\"] || \"\",\n  Apellido: data[\"Apellido\"] || data[\"Apellido:\"] || data[\"apellido\"] || \"\",\n  Email: data[\"Email\"] || data[\"Email:\"] || data[\"email\"] || \"\",\n  Frecuencia: data[\"Frecuencia\"] || data[\"Elije la frecuencia con la cual deseas recibir ofertas:\"] || \"\",\n  Modalidad: data[\"Modalidad\"] || data[\"Modalidad:\"] || data[\"modalidad\"] || \"\",\n  Region: data[\"Región\"] || data[\"Region\"] || data[\"Elije la Región en la cual te gustaría centrar tu busqueda:\"] || \"\"\n};\n\n// ⚠️ Validar campos vacíos\nconst camposFaltantes = Object.entries(nuevo)\n  .filter(([_, valor]) => !valor || valor.trim() === \"\")\n  .map(([clave]) => clave);\n\n// 📧 Validar formato de correo electrónico\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nconst emailValido = emailRegex.test(nuevo.Email);\n\n// 🚨 Si falta un campo o el correo es inválido → detener flujo\nif (camposFaltantes.length > 0 || !emailValido) {\n  return [\n    {\n      json: {\n        estado: \"ERROR\",\n        mensaje: \"Faltan datos o el correo no es válido.\",\n        faltantes: camposFaltantes,\n        email: nuevo.Email\n      }\n    }\n  ];\n}\n\n// ✅ Si todo está bien, devolver datos normalizados\nreturn [\n  {\n    json: {\n      ...nuevo,\n      estado: \"ACTIVA\"\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        528
+      ],
+      "id": "e0dcf684-1776-4447-9a56-a24afb10eee6",
+      "name": "Validar datos1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- Helpers ---\nfunction norm(s){\n  return String(s || '')\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') // sin acentos\n    .toLowerCase().trim();\n}\n\nfunction formatLocal(dt){\n  const pad = n => String(n).padStart(2,'0');\n  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;\n}\n\nfunction nextFrom(freq, base = new Date()){\n  const f = norm(freq);\n  const d = new Date(base);\n  if (/30\\s*min/.test(f))              d.setMinutes(d.getMinutes() + 30);\n  else if (/^4\\s*dias?$/.test(f))      d.setDate(d.getDate() + 4);\n  else if (/^15\\s*dias?$/.test(f))     d.setDate(d.getDate() + 15);\n  else if (/semana/.test(f))           d.setDate(d.getDate() + 7);\n  else if (/mes/.test(f))              d.setMonth(d.getMonth() + 1);\n  else if (/24\\s*h/.test(f) || /dia/.test(f))\n                                       d.setDate(d.getDate() + 1);\n  else                                 d.setDate(d.getDate() + 7); // default semanal\n  return formatLocal(d);\n}\n\nconst data = items[0].json;\nconst freq = data.Frecuencia || data['Elije la frecuencia con la cual deseas recibir ofertas:'] || '';\ndata.next_run = nextFrom(freq);\ndata.estado   = 'ACTIVA';\nreturn [{ json: data }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        544
+      ],
+      "id": "cea38da7-0f83-436e-854e-45035a866fba",
+      "name": "next_run1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2a7bb9ee-b99d-40d9-ac05-d05048a35194",
+              "leftValue": "={{ $json.estado }}",
+              "rightValue": "ERROR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        528
+      ],
+      "id": "b60672b5-9d42-4cff-beab-c2a6124dcdd6",
+      "name": "Revisar Estado1"
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('On form submission2').item.json['Email:'] }}",
+        "subject": "Error en el registro",
+        "html": "=<p>Hola 👋</p>\n<p><strong>Faltan datos en tu registro.</strong></p>\n<p>Por favor, completa todos los campos obligatorios y revisa que tu correo esté correctamente escrito.</p>\n\n<p>Campos incompletos detectados:</p>\n<ul>\n  {{ $('Validar datos1').item.json.faltantes }}\n</ul>\n\n\n<hr>\n<p style=\"font-size: 12px; color: #888;\">\nSistema Automatizado – Proyecto de Práctica Informática<br>\nUniversidad Andrés Bello · n8n\n</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1344,
+        288
+      ],
+      "id": "a4c26e43-2a79-4d41-b130-f9341a5489a2",
+      "name": "Error email1",
+      "webhookId": "bb608e3e-309e-442d-a2c7-151be37fd40d",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('On form submission2').item.json['Email:'] }}\n",
+        "subject": "Confirmación de registro",
+        "html": "=<p>👋 Hola <strong>{{ $('On form submission2').item.json['Nombre:'] }} {{ $('On form submission2').item.json['Apellido:'] }}</strong>\n,</p>\n\n<p>Tu registro en el sistema automatizado de búsqueda de prácticas profesionales en informática fue <strong>exitoso</strong>.</p>\n\n<p>📩 Has indicado el siguiente correo: <em>{{ $('On form submission2').item.json['Email:'] }}</em></p>\n\n<p>⚙️ <strong>Preferencias registradas:</strong></p>\n<ul>\n  <li>⏱️ Frecuencia de reportes: <em>{{ $('On form submission2').item.json['Elije la frecuencia con la cual deseas recibir ofertas:'] }}</em></li>\n  <li>💻 Modalidad preferida: <em>{{ $('On form submission2').item.json['Modalidad:'] }}</em></li>\n  <li>🌍 Región de interés: <em>{{ $('On form submission2').item.json['Elije la Región en la cual te gustaría centrar tu busqueda:'] }}</em></li>\n</ul>\n\n<p>Gracias por registrarte 🎉</p>\n\n<p>\nA partir de ahora recibirás las oportunidades de práctica seleccionadas automáticamente según tus preferencias.<br>\nSi deseas modificar tus datos o cancelar tu suscripción, puedes hacerlo en cualquier momento respondiendo a este correo.\n</p>\n\n<hr>\n<p style=\"font-size: 12px; color: #888;\">\nSistema Automatizado – Proyecto de Práctica Informática<br>\nUniversidad Andrés Bello · n8n\n</p>\n {{ $('On form submission2').item.json['Nombre:'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2176,
+        608
+      ],
+      "id": "20cb838b-e5e7-49f8-867a-31c33fdbabed",
+      "name": "Email registro exitoso1",
+      "webhookId": "0fc67036-4214-4c8e-9214-24f0a46d3728",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('On form submission2').item.json['Email:'] }}",
+        "subject": "¡Ya estas registrado!",
+        "html": "=<p>👋 Hola {{ $('Validar datos1').item.json.Nombre }},</p>\n\n<p>Ya estás registrado en el sistema de búsqueda de prácticas.  \nTus preferencias fueron actualizadas correctamente ✅</p>\n\n<ul>\n  <li>📩 Email: <em> {{ $('Validar datos1').item.json.Email }}</em></li>\n  <li>⏱ Frecuencia: <em>{{ $('Validar datos1').item.json.Frecuencia }}</em></li>\n  <li>💻 Modalidad: <em>{{ $('Validar datos1').item.json.Modalidad }}</em></li>\n  <li>🌍 Región: <em>{{ $('Validar datos1').item.json.Region }}</em></li>\n</ul>\n\n<hr>\n<p style=\"font-size: 12px; color: #888;\">Sistema Automatizado – Proyecto de Práctica Informática</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2096,
+        432
+      ],
+      "id": "e31750ce-396f-4fab-a016-2e24298f8fd7",
+      "name": "Email ya registrado1",
+      "webhookId": "1f11458c-f8ff-438c-bd8f-3b3f3dcd37c1",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cdb74758-b031-42bc-9457-3084c7822e10",
+              "leftValue": "={{$json.row_number > 0 }}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1712,
+        544
+      ],
+      "id": "d71154c4-8831-451b-9ef6-a0bb89074c4c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "=https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "= {{ $('On form submission2').item.json['Nombre:'] }}",
+            "Frecuencia": "={{ $('On form submission2').item.json['Elije la frecuencia con la cual deseas recibir ofertas:'] }}",
+            "estado": "={{ $('Revisar Estado1').item.json.estado }}",
+            "next_run": "={{ $('next_run1').item.json.next_run }}\n",
+            "Apellido": "={{ $('On form submission2').item.json['Apellido:'] }}",
+            "Email": "={{ $('On form submission2').item.json['Email:'] }}",
+            "Modalidad": "={{ $('On form submission2').item.json['Modalidad:'] }}",
+            "Región": "={{ $('On form submission2').item.json['Elije la Región en la cual te gustaría centrar tu busqueda:'] }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1920,
+        432
+      ],
+      "id": "6aae8598-8d44-4c32-ac42-2f2f894d834f",
+      "name": "Update row in sheet2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "=https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "= {{ $('On form submission2').item.json['Nombre:'] }}",
+            "Frecuencia": "={{ $('On form submission2').item.json['Elije la frecuencia con la cual deseas recibir ofertas:'] }}",
+            "estado": "={{ $('Revisar Estado1').item.json.estado }}",
+            "next_run": "= {{ $('next_run1').item.json.next_run }}",
+            "Apellido": "={{ $('On form submission2').item.json['Apellido:'] }}",
+            "Email": "={{ $('On form submission2').item.json['Email:'] }}",
+            "Modalidad": "={{ $('On form submission2').item.json['Modalidad:'] }}",
+            "Región": "={{ $('On form submission2').item.json['Elije la Región en la cual te gustaría centrar tu busqueda:'] }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1936,
+        608
+      ],
+      "id": "164cb4bf-6128-46a6-84f4-7e382f9e6b18",
+      "name": "Append row in sheet3",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?pli=1&gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.Email.trim() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        544
+      ],
+      "id": "65dffb84-0838-4572-8923-ee518a86103b",
+      "name": "Get row(s) in sheet2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- helpers robustos para convertir next_run ---\nfunction toDate(x) {\n  if (x == null || x === '') return null;\n  if (typeof x === 'number') {\n    // serial de Google Sheets\n    const base = new Date(Date.UTC(1899, 11, 30));\n    return new Date(base.getTime() + x * 86400000);\n  }\n  const s = String(x).trim();\n  // intenta ISO local: \"YYYY-MM-DDTHH:mm:ss\"\n  let d = new Date(s.includes('T') ? s : s.replace(' ', 'T'));\n  if (!isNaN(d)) return d;\n  // intenta como UTC agregando 'Z'\n  d = new Date((s.includes('T') ? s : s.replace(' ', 'T')) + 'Z');\n  return isNaN(d) ? null : d;\n}\n\nconst now = new Date();\nconst out = [];\nlet skipped = 0;\n\nfor (const it of items) {\n  const r = it.json || {};\n  const raw = r.next_run ?? r.Next_run ?? r['next_run'];\n  const d = toDate(raw);\n  if (d && d <= now) out.push(it);\n  else skipped++;\n}\n\nif (out.length === 0) {\n  return [{ json: { _noop: true, status: 'NO_MATCH', skipped, note: 'No hay registros con next_run vencido' } }];\n}\nreturn out;\n"
+      },
+      "id": "d889dc2f-716f-4eb4-ad3e-7d4d8007e94e",
+      "name": "Filtrar por next_run1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        960
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Si llega un marcador NOOP, simplemente lo pasamos tal cual o lo ignoramos\nconst hasNoopOnly = items.length === 1 && items[0]?.json?._noop === true;\nif (hasNoopOnly) {\n  // Si prefieres no propagar nada, devuelve el NOOP:\n  return items;\n  // O, si prefieres cortar aquí sin error:\n  // return [];\n}\n\n// --- Helpers robustos ---\nfunction limpiarRegion(r) {\n  if (r == null) return '';\n  return String(r).split(/[–-]/)[0].trim();\n}\n\nfunction pick(obj, keys, def='') {\n  for (const k of keys) {\n    const v = obj?.[k];\n    if (v !== undefined && v !== null && String(v).trim() !== '') return v;\n  }\n  return def;\n}\n\nfunction toIsoDateMaybe(x) {\n  if (x == null || x === '') return '';\n  try {\n    if (typeof x === 'number') {\n      const base = new Date(Date.UTC(1899, 11, 30));\n      return new Date(base.getTime() + x * 86400000).toISOString();\n    }\n    const d = new Date(String(x).replace(' ', 'T') + 'Z');\n    return isNaN(d.getTime()) ? String(x) : d.toISOString();\n  } catch {\n    return String(x);\n  }\n}\n\nconst validItems = items.filter(it => !it.json._noop);\n\nreturn validItems.map(i => {\n  const r = i.json || {};\n  const email      = String(pick(r, ['Email','email'])).trim();\n  const modalidad  = String(pick(r, ['Modalidad','modalidad'])).trim().toLowerCase();\n  const regionRaw  = pick(r, ['Región','Region','REGION','region']);\n  const frecuencia = String(pick(r, ['Frecuencia','frecuencia'])).trim();\n  const next_run   = toIsoDateMaybe(pick(r, ['next_run','Next_run','NEXT_RUN']));\n\n  return {\n    json: {\n      email,\n      modalidad,\n      region: limpiarRegion(regionRaw),\n      frecuencia,\n      next_run,\n      status: 'READY'\n    }\n  };\n});\n"
+      },
+      "id": "74cde2d2-4bd0-47b1-896a-6a9215c900d8",
+      "name": "Normalizar payload1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2336,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "107b03da-f287-4da0-a80a-accb875bb2b0",
+      "name": "Split In Batches1",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://empleos.santander.cl/app/minisite/site/_search",
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "bodyParametersJson": "=={{ {\n  from: 0,\n  size: $json.tamano || 25,\n  query: {\n    simple_query_string: { query: $json.q || '' }\n  }\n} }}",
+        "headerParametersJson": "=={{ {\n  \"User-Agent\": \"Mozilla/5.0\",\n  \"Accept-Language\": \"es-CL,es;q=0.9\",\n  \"Content-Type\": \"application/json\",\n  \"Accept\": \"application/json,*/*\"\n} }}\n"
+      },
+      "id": "fb654c23-65d5-4b7b-badf-f66987ee597b",
+      "name": "HTTP Santander (placeholder)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        1168
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "31bfe64a-8f0e-47c6-a4b8-059367bb74d9",
+      "name": "Merge Results1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        3456,
+        928
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?pli=1&gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "estado",
+              "lookupValue": "=ACTIVA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1952,
+        960
+      ],
+      "id": "4f5cdd30-a063-4bbc-ade2-d4dbfdffa46f",
+      "name": "Get row(s) in sheet3",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSER INDEED v16 (desescapa \\ y busca correctamente empresa y región) ===\nlet html = $json.data ?? $json.body ?? \"\";\nconst jobs = [];\n\n// 1️⃣ Limpieza agresiva\nhtml = html\n  .replace(/\\\\n/g, \" \")   // eliminar saltos de línea escapados\n  .replace(/\\\\t/g, \" \")\n  .replace(/\\\\r/g, \" \")\n  .replace(/\\\\\"/g, '\"')   // arreglar comillas escapadas\n  .replace(/\\\\\\\\/g, \"\\\\\") // limpiar dobles barras\n  .replace(/\\s+/g, \" \");\n\n// 2️⃣ Dividir por cada oferta detectando <a ... data-jk o <div ... data-jk\nconst bloques = html.split(/<[^>]+data-jk=\"/).slice(1);\n\nfor (const b of bloques) {\n  const bloque = '<div data-jk=\"' + b; // reconstruir bloque\n  const titulo =\n    (bloque.match(/title=\"([^\"]+)\"/i) ||\n      bloque.match(/<span[^>]*id=\"jobTitle[^\"]*\"[^>]*>(.*?)<\\/span>/i) ||\n      [])[1]\n      ?.replace(/<[^>]+>/g, \"\")\n      ?.trim() || \"\";\n\n  let link = (bloque.match(/href=\"([^\"]+)\"/i) || [])[1] || \"\";\n  if (link && !link.startsWith(\"http\")) link = `https://cl.indeed.com${link}`;\n\n  const empresa =\n    (bloque.match(/data-testid=\"company-name\"[^>]*>([^<]+)</i) || [])[1]?.trim() ||\n    (bloque.match(/cmp=([^\"&]+)/i) || [])[1]?.replace(/-/g, \" \") ||\n    \"Sin empresa\";\n\n  const region =\n    (bloque.match(/data-testid=\"text-location\"[^>]*>([^<]+)</i) || [])[1]?.trim() ||\n    \"Sin región\";\n\n  const modalidad =\n    /remot/i.test(region)\n      ? \"Remoto\"\n      : /híbrid/i.test(region)\n      ? \"Híbrido\"\n      : \"Presencial\";\n\n  if (titulo) {\n    jobs.push({\n      fuente: \"Indeed\",\n      titulo,\n      empresa,\n      region,\n      modalidad,\n      link,\n    });\n  }\n}\n\n// 3️⃣ Salida\nif (jobs.length === 0) {\n  return [{ json: { mensaje: \"No se extrajeron ofertas válidas\", total: 0 } }];\n}\n\nreturn jobs.map((x) => ({ json: x }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2976,
+        768
+      ],
+      "id": "545f5f22-ecba-4669-9dec-30ad32040c2e",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Soporta JSON (hits.hits) o respuesta String (intenta parsear; fallback HTML)\nlet text = $json.data ?? $json.body ?? null;\nlet hits = [];\n\nif (typeof text === \"string\") {\n  let t = text.trim();\n  if (t.startsWith(\")]}'\")) t = t.slice(4).trim(); // anti-XSSI\n  try { const js = JSON.parse(t); hits = js?.hits?.hits || []; } catch {}\n} else if ($json?.hits?.hits) {\n  hits = $json.hits.hits;\n}\n\nif (!hits.length) {\n  // Fallback: intentar raspar enlaces si fue HTML\n  const html = typeof text === \"string\" ? text : \"\";\n  const re = /<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)<\\/a>/gi;\n  const alt = [];\n  let m; \n  while ((m = re.exec(html)) && alt.length < 25) {\n    const link = m[1];\n    const titulo = (m[2] || \"\").replace(/<[^>]+>/g, \"\").trim();\n    if (titulo && link) alt.push({ fuente:\"Santander\", titulo, link, region:\"Sin región\", modalidad:\"Presencial\" });\n  }\n  return alt.length ? alt.map(x => ({ json: x })) \n                    : [{ json: { fuente: \"Santander\", mensaje: \"Sin resultados o respuesta no JSON\" } }];\n}\n\nconst out = hits.map(h => {\n  const s = h._source || h;\n  const titulo = s?.title || \"Sin título\";\n  const link = s?.applyUrl || s?.url || \"\";\n  const region = (s?.location && (s.location.display_name || s.location.city)) || s?.city || \"Sin región\";\n  const modalidad = /remot/i.test(((s?.modality || \"\") + \" \" + region)) ? \"Remoto\" : \"Presencial\";\n  return { fuente: \"Santander\", titulo, link, region, modalidad };\n});\n\nreturn out.map(x => ({ json: x }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        1168
+      ],
+      "id": "1ddc6c90-2342-4a42-93b8-c9db4a8bc973",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSER LABORUM v8 - Limpieza avanzada ===\nconst raw = $json.data || $json.body || \"\";\nconst text = String(raw).replace(/\\r/g, \"\").trim();\n\n// --- Expresión más flexible ---\nconst regex = /\\[(?:Nuevo|Actualizado|\\#\\#\\#)?[^\\]]*?(Práctica[^\\#\\n]+|Alumno en Práctica[^\\#\\n]*)[^\\]]*?\\#\\#\\#\\s*([A-ZÁÉÍÓÚÑÜ][^\\#\\n]+?)\\s*(?:\\#\\#\\#\\s*([^#\\n]+?))?\\s*\\#\\#\\#\\s*(Presencial|Remoto|Híbrido)[^\\]]*\\]\\((https:\\/\\/www\\.laborum\\.cl\\/empleos\\/[^\\)]+)\\)/gi;\n\nconst out = [];\nlet match;\n\nwhile ((match = regex.exec(text))) {\n  let titulo   = (match[1] || \"\").replace(/[-–—]+/g, \"\").trim();\n  let empresa  = (match[2] || \"\").trim();\n  let region   = (match[3] || \"\").trim();\n  let modalidad= (match[4] || \"\").trim() || \"Presencial\";\n  let link     = (match[5] || \"\").trim();\n\n  // --- LIMPIEZA ---\n  // 1. Eliminar Markdown residual e imágenes\n  empresa = empresa.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n  region  = region.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n  titulo  = titulo.replace(/!\\[.*?\\]\\(.*?\\)/g, \"\").replace(/\\s{2,}/g, \" \").trim();\n\n  // 2. Si empresa contiene \"Región\", intercambiar\n  if (/Región/i.test(empresa)) {\n    region = empresa;\n    empresa = \"Sin empresa\";\n  }\n\n  // 3. Si región está vacía o sin \"Región\", intentar buscar dentro del bloque\n  if (!/Región/i.test(region)) {\n    const m = empresa.match(/([A-ZÁÉÍÓÚÑÜa-zñü\\s]+,\\s*Región\\s*[A-ZÁÉÍÓÚÑÜIVX]+)/);\n    if (m) {\n      region = m[1].trim();\n      empresa = empresa.replace(m[0], \"\").trim();\n    }\n  }\n\n  // 4. Recortar empresa si es descripción larga\n  if (empresa.split(/\\s+/).length > 6) {\n    empresa = empresa\n      .replace(/Somos.*|Compañía.*|Empresa.*|holding.*|S\\.A\\..*|Sociedad.*|Limitada.*|con.*|del.*|la.*|los.*|las.*|de.*$/gi, \"\")\n      .trim();\n  }\n\n  // 5. Limpieza final\n  empresa = empresa.replace(/[,.-]+$/g, \"\").trim();\n  region  = region.replace(/^Región\\s*/i, \"\").trim() || \"Sin región\";\n  titulo  = titulo.replace(/-{2,}|={2,}/g, \"\").trim();\n\n  if (link) {\n    out.push({\n      fuente: \"Laborum\",\n      titulo,\n      empresa: empresa || \"Sin empresa\",\n      region,\n      modalidad,\n      link\n    });\n  }\n}\n\n// --- Fallback mínimo ---\nif (out.length === 0) {\n  const altRegex = /\\[\\s*(Práctica[^\\#\\n]+|Alumno en Práctica[^\\#\\n]*)[^\\]]*\\]\\((https:\\/\\/www\\.laborum\\.cl\\/empleos\\/[^\\)]+)\\)/gi;\n  let m;\n  while ((m = altRegex.exec(text))) {\n    out.push({\n      fuente: \"Laborum\",\n      titulo: (m[1] || \"\").trim(),\n      empresa: \"Sin empresa\",\n      region: \"Sin región\",\n      modalidad: \"Presencial\",\n      link: m[2]\n    });\n  }\n}\n\n// --- Eliminar duplicados ---\nconst unicos = out.filter((v, i, a) => a.findIndex(t => t.link === v.link) === i);\n\nreturn unicos.length\n  ? unicos.map(x => ({ json: x }))\n  : [{ json: { fuente: \"Laborum\", mensaje: \"Sin resultados válidos\", total: 0 } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        960
+      ],
+      "id": "d6058e01-067d-4592-af68-811b7998d9cd",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "url": "https://r.jina.ai/https://www.laborum.cl/empleos-busqueda-practica-informatica.html",
+        "allowUnauthorizedCerts": true,
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "6d461c43-caa1-44e6-b94c-a27aa11790fb",
+      "name": "HTTP Laborum (placeholder)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.scraperapi.com?api_key=d837bd9aef43a8ad236815beb2ee184a&url=https://cl.indeed.com/jobs?q=práctica+informática&render=true&premium=true",
+        "responseFormat": "string",
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)              AppleWebKit/537.36 (KHTML, like Gecko)              Chrome/118.0.5993.118 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "es-CL,es;q=0.9,en;q=0.8"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+            }
+          ]
+        }
+      },
+      "id": "babc6663-d29c-4435-84be-eb45556e4222",
+      "name": "HTTP Indeed (placeholder)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "link",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        3968,
+        480
+      ],
+      "id": "f7420a03-ef74-4970-b7de-204578a68dfd",
+      "name": "Remove Duplicates1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === APLANA objetos anidados (arregla Merge Results) ===\nitems = items.map(i => {\n  if (i.json?.json && typeof i.json.json === 'object') {\n    return { json: { ...i.json.json } };\n  }\n  return i;\n});\n\n// === Filtro por preferencias de región y modalidad ===\n// Soporta modalidad seleccionada como string (\"remoto\") o lista [\"remoto\",\"presencial\"]\n\nconst prefs = $items('Split In Batches1', 0, 0)?.json || {};\nconst prefRegionRaw = prefs.region || '';\nconst prefModaRaw   = prefs.modalidad || '';\n\n// Helpers de normalización\nconst sinAcentos = s => (s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\nconst normTxt = s => sinAcentos(String(s||'').toLowerCase())\n  .replace(/\\s+/g,' ')\n  .trim();\n\n// Canonicaliza modalidad a: \"Remoto\" | \"Híbrido\" | \"Presencial\" | \"\"\nfunction canonModa(s) {\n  const t = normTxt(s);\n  if (!t) return '';\n  if (/(remot|teletrab|home ?office|desde casa|anywhere|wfh)/.test(t)) return 'Remoto';\n  if (/(hibrid|híbrid|mixt|semi|flex)/.test(t))                     return 'Híbrido';\n  if (/(presenc|on ?site|en sitio|oficin|sede)/.test(t))           return 'Presencial';\n  return '';\n}\n\n// Lee preferencia de modalidad (string o array/coma-separado) -> Set canónico\nfunction readModaPref(x) {\n  if (Array.isArray(x)) return new Set(x.map(canonModa).filter(Boolean));\n  const t = String(x || '').split(',').map(v => v.trim()).filter(Boolean);\n  return new Set(t.map(canonModa).filter(Boolean));\n}\n\nconst prefModaSet = readModaPref(prefModaRaw);\nconst prefRegion  = normTxt(prefRegionRaw);\n\n// Reglas de compatibilidad: si prefieres \"Remoto\", aceptamos también \"Híbrido\"\nfunction matchModa(prefSet, itemModa) {\n  if (!prefSet.size) return true;              // sin preferencia -> todos\n  const m = canonModa(itemModa);\n  if (!m) return false;\n  if (prefSet.has('Híbrido') && m === 'Híbrido') return true;\n  if (prefSet.has('Presencial') && m === 'Presencial') return true;\n  if (prefSet.has('Remoto')) return (m === 'Remoto' || m === 'Híbrido');\n  return false;\n}\n\n// Normaliza y filtra\nconst out = [];\nfor (const { json } of items) {\n  if (!json.link) continue;\n\n  // Completa/estandariza modalidad del item usando varias pistas\n  json.modalidad = canonModa(json.modalidad) \n                || canonModa(json.region) \n                || canonModa(json.titulo) \n                || 'Presencial'; // por defecto asumimos presencial\n\n  // Región: tolerante (RM/Metropolitana/Santiago; O'Higgins/OHiggins, etc.)\n  const rItem = normTxt(json.region);\n  const passRegion = !prefRegion\n    || rItem.includes(prefRegion)\n    || (prefRegion === 'rm' && (rItem.includes('metropolitana') || rItem.includes('santiago')))\n    || (prefRegion.includes('ohiggins') && rItem.includes('ohiggins'));\n\n  const passModa = matchModa(prefModaSet, json.modalidad);\n\n  if (passRegion && passModa) out.push({ json });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4144,
+        480
+      ],
+      "id": "eb525cdf-38f7-4039-9677-de84ea3478d3",
+      "name": "Filtrar por preferencias1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Limpia parámetros de tracking en los links antes de deduplicar\nconst stripParams = [\n  'utm_source','utm_medium','utm_campaign','utm_term','utm_content',\n  'gclid','fbclid','fccid','vjs','from','ad','dq'\n];\n\nreturn items.map(({ json }) => {\n  if (json.link && typeof json.link === 'string') {\n    // normaliza entidades HTML tipo &amp;\n    let href = json.link.trim().replace(/&amp;/g, '&');\n\n    try {\n      // Soporta links relativos (Indeed a veces trae /rc/clk?...):\n      if (href.startsWith('/')) href = 'https://cl.indeed.com' + href;\n\n      const u = new URL(href);\n      // elimina parámetros de tracking\n      stripParams.forEach(p => u.searchParams.delete(p));\n      // quita el fragmento #...\n      u.hash = '';\n      // normaliza protocolo a https si venía http\n      if (u.protocol === 'http:') u.protocol = 'https:';\n\n      json.link = u.toString();\n    } catch {\n      // si falla el parseo, al menos quita &amp; y espacios\n      json.link = href;\n    }\n  }\n  return { json };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3792,
+        480
+      ],
+      "id": "0f5f658a-135e-4eb2-9c74-fe987039ec0e",
+      "name": "limpiar links1",
+      "notes": "A veces el mismo aviso trae el mismo link con parámetros de tracking distintos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8d154a72-080e-415d-a29e-9337eba90379",
+              "leftValue": "={{$json.link}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3664,
+        928
+      ],
+      "id": "76401200-f515-453f-8dbf-64fc93faaff7",
+      "name": "If - link existe (válido)1",
+      "notes": "TRUE → limpiar links → remove duplicates → filtrar preferencias\nFALSE → log a hoja \"Errores\" (timestamp, email, fuente, status, mensaje, preview)\n"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === APLANADOR UNIVERSAL + EMAIL BUILDER PRO ===\n\n// --- Funciones base ---\nfunction unbox(obj) {\n  let j = obj?.json ?? obj ?? {};\n  if (j && typeof j === 'object' && j.json && typeof j.json === 'object') j = j.json;\n  for (const k of ['oferta','payload','data','result','resultado','item'])\n    if (j && typeof j[k] === 'object' && j[k] !== null) { j = j[k]; break; }\n  return j || {};\n}\nfunction esc(s){ return String(s ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[m])); }\nfunction pick(...xs){ for (const x of xs){ if (x !== undefined && x !== null && String(x).trim() !== '') return x; } return ''; }\n\n// --- 1) Aplanar y colectar shapes para debug ---\nconst shapes = {};\nconst filasRaw = items.map(unbox);\nfor (const r of filasRaw) {\n  const keys = Object.keys(r).sort().join('|');\n  shapes[keys] = (shapes[keys] || 0) + 1;\n}\n\n// --- 2) Normalizar ---\nconst filas = filasRaw\n  .map(r => ({\n    fuente:   pick(r.fuente, r.source, r.origen, 'desconocida'),\n    titulo:   pick(r.titulo, r.title, r.nombre),\n    empresa:  pick(r.empresa, r.company, r.organizacion, 'Sin empresa'),\n    region:   pick(r.region, r.ubicacion, r.location),\n    modalidad:pick(r.modalidad, r.mode, r.tipoModalidad),\n    link:     pick(r.link, r.url, r.href)\n  }))\n  .filter(r => r.titulo || r.link);\n\n// --- 3) Extraer preferencias (asumimos del primer registro) ---\nconst prefRegion = filas[0]?.region && filas[0].region !== 'Sin región' ? filas[0].region : 'No especificada';\nconst prefModalidad = filas[0]?.modalidad && filas[0].modalidad !== 'Presencial' ? filas[0].modalidad : 'Presencial';\n\n// --- 4) Métrica por fuente ---\nconst porFuente = {};\nfor (const r of filas) porFuente[r.fuente] = (porFuente[r.fuente] || 0) + 1;\nconst stats = Object.entries(porFuente)\n  .map(([k,v]) => `<li><b>${esc(k)}</b>: ${v}</li>`)\n  .join('');\n\n// --- 5) Tabla de resultados ---\nconst rowsHtml = filas.map((r, i) => `\n  <tr>\n    <td style=\"text-align:center;color:#555;\">${i+1}</td>\n    <td style=\"font-weight:500;\">${esc(r.titulo)}</td>\n    <td style=\"color:#444;\">${esc(r.empresa)}</td>\n    <td style=\"color:#777;\">${esc(r.fuente)}</td>\n    <td style=\"text-align:center;\">\n      ${r.link ? `<a href=\"${esc(r.link)}\" target=\"_blank\" style=\"color:#2563eb;text-decoration:none;\">Ver oferta</a>` : ''}\n    </td>\n  </tr>\n`).join('');\n\n// --- 6) Email destinatario ---\nfunction pickEmail(obj){ if(!obj) return ''; const v = obj.Email ?? obj.email ?? obj.to ?? ''; return String(v).trim(); }\nlet emailTo = '';\ntry {\n  const v = $items('Validar datos1', 0, 0);\n  if (Array.isArray(v) && v[0]?.json) emailTo = pickEmail(v[0].json);\n} catch {}\nif (!emailTo) {\n  try {\n    const s = $items('Split In Batches1', 0, 0);\n    if (Array.isArray(s) && s[0]?.json) emailTo = pickEmail(s[0].json);\n  } catch {}\n}\nif (!emailTo && items[0]?.json) emailTo = pickEmail(items[0].json);\nemailTo = String(emailTo || '').trim();\n\n// --- 7) HTML final ---\nconst total = filas.length;\nconst shapesDebug = Object.entries(shapes)\n  .map(([k,v]) => `<li><code>${esc(k)}</code>: ${v}</li>`).join('');\n\nconst html = `\n  <div style=\"font-family:'Segoe UI',Arial,sans-serif;max-width:900px;margin:auto;background:#f9fafb;border-radius:8px;overflow:hidden;\">\n    <div style=\"background:#2563eb;color:white;padding:16px 20px;\">\n      <h2 style=\"margin:0;font-weight:600;\">Resultados de búsqueda de prácticas</h2>\n      <p style=\"margin:4px 0 0;font-size:14px;\">Total encontrados: <b>${total}</b></p>\n    </div>\n\n    <div style=\"padding:20px 24px;\">\n      <div style=\"margin-bottom:10px;padding:12px 16px;background:#eef2ff;border-radius:6px;\">\n        <p style=\"margin:0;font-size:14px;color:#374151;\">\n          <b>Región preferida:</b> ${esc(prefRegion)}<br>\n          <b>Modalidad deseada:</b> ${esc(prefModalidad)}\n        </p>\n      </div>\n\n      ${stats ? `<p style=\"margin-bottom:4px;\">Distribución por fuente:</p><ul style=\"margin-top:4px;\">${stats}</ul>` : '<p><i>Sin conteo por fuente.</i></p>'}\n\n      <table border=\"0\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;margin-top:10px;background:white;border:1px solid #e5e7eb;\">\n        <thead style=\"background:#f3f4f6;\">\n          <tr>\n            <th style=\"text-align:center;\">#</th>\n            <th style=\"text-align:left;\">Título</th>\n            <th style=\"text-align:left;\">Empresa</th>\n            <th style=\"text-align:left;\">Fuente</th>\n            <th style=\"text-align:center;\">Link</th>\n          </tr>\n        </thead>\n        <tbody>\n          ${rowsHtml || `<tr><td colspan=\"5\" style=\"text-align:center;padding:16px;color:#888;\">Sin resultados válidos</td></tr>`}\n        </tbody>\n      </table>\n\n      <p style=\"margin-top:16px;font-size:12px;color:#6b7280;text-align:center;\">\n        Correo generado automáticamente por <b>n8n</b>. No responder a este mensaje.\n      </p>\n\n      <details style=\"margin-top:10px;color:#888;font-size:12px;\">\n        <summary>Debug: shapes de entrada</summary>\n        <ul>${shapesDebug}</ul>\n      </details>\n    </div>\n  </div>\n`;\n\nconst subject = total > 0\n  ? `Resultados: ${total} prácticas encontradas`\n  : `No se encontraron prácticas en esta búsqueda`;\n\nconst text = total > 0\n  ? `Se encontraron ${total} resultados. Revisa la tabla en el HTML.`\n  : `No se encontraron resultados con los filtros seleccionados.`;\n\nreturn [{ json: { to: emailTo, subject, html, text, total } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4352,
+        512
+      ],
+      "id": "d7ccd558-a3b7-4c53-ba7d-8d090ccb4020",
+      "name": "Build HTML1"
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "html": "=={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        4544,
+        512
+      ],
+      "id": "4d77e428-f024-460c-9d77-59e5bd50f7de",
+      "name": "Send email1",
+      "webhookId": "c8d3c268-f510-472c-b4de-4f38ab0157db",
+      "alwaysOutputData": true,
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Toma el usuario actual desde \"Split In Batches\"\nconst u = $items('Split In Batches1', 0, 0)?.json || {};\n\n// helpers del punto 2\nfunction norm(s){\n  return String(s || '')\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase().trim();\n}\nfunction formatLocal(dt){\n  const pad = n => String(n).padStart(2,'0');\n  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;\n}\nfunction nextFrom(freq, base = new Date()){\n  const f = norm(freq);\n  const d = new Date(base);\n  if (/30\\s*min/.test(f))              d.setMinutes(d.getMinutes() + 30);\n  else if (/^4\\s*dias?$/.test(f))      d.setDate(d.getDate() + 4);\n  else if (/^15\\s*dias?$/.test(f))     d.setDate(d.getDate() + 15);\n  else if (/semana/.test(f))           d.setDate(d.getDate() + 7);\n  else if (/mes/.test(f))              d.setMonth(d.getMonth() + 1);\n  else if (/24\\s*h/.test(f) || /dia/.test(f))\n                                       d.setDate(d.getDate() + 1);\n  else                                 d.setDate(d.getDate() + 7);\n  return formatLocal(d);\n}\n\nreturn [{\n  json: {\n    Email: u.email || u.Email,                // clave para buscar la fila\n    next_run: nextFrom(u.frecuencia || u.Frecuencia)\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4720,
+        512
+      ],
+      "id": "734bbcaa-37f2-48d3-a84c-4efe7bf9c9bf",
+      "name": "Bump next_run1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "{{$json.Email}}",
+            "next_run": "{{$json.next_run}}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4912,
+        512
+      ],
+      "id": "0bb63230-5285-487f-bbae-cb10425b9f8c",
+      "name": "Update row in sheet3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1664,
+        1024
+      ],
+      "id": "19609d68-45a2-4802-90d7-05747e5acb41",
+      "name": "Schedule Trigger1",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "content": "HU4",
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        736,
+        1472
+      ],
+      "id": "b3a14adf-923a-4df8-93c2-86836f0f8006",
+      "name": "Sticky Note",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "HU8"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        2400
+      ],
+      "id": "8b67a57f-8b26-4ba0-bf76-6296e0608e80",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "path": "03183869-f6a0-4fc8-9e1a-673c016f6077",
+        "formTitle": "HU8 - Activar / Pausar reportes",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Accion",
+              "fieldType": "radio",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Pausar reportes programados"
+                  },
+                  {
+                    "option": "Reanudar reportes programados"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9e15c1a8-4491-4bb8-aa3e-f33b1aa18004",
+      "name": "Formulario_HU8",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 1,
+      "position": [
+        768,
+        2672
+      ],
+      "webhookId": "03183869-f6a0-4fc8-9e1a-673c016f6077",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  email: $json.email.trim().toLowerCase(),\n  accion: $json.accion\n}];\n"
+      },
+      "id": "76f587b2-cc47-4b48-accb-4c267a4f311d",
+      "name": "Normalizar_Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        2672
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "lookup",
+        "sheetId": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+        "range": "Registro de Inscritos!A:Z",
+        "lookupColumn": "Email",
+        "lookupValue": "={{ $json.email }}",
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "3d44fa5f-1d72-4b62-9081-c7c6fa2130ef",
+      "name": "Buscar_Usuario_en_Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        2672
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.Email }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "e7f6e2ac-1f12-4573-9e88-8b0798322514",
+      "name": "Existe_Usuario?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        2672
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "mensaje",
+              "value": "No encontramos una suscripción asociada a este correo. Verifica que estés registrado en el sistema."
+            },
+            {
+              "name": "detalle",
+              "value": "HU8 - 404 SUSCRIPCIÓN NO EXISTE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cc8a34c8-7222-42da-b0d4-67420836944c",
+      "name": "Mensaje_NoExiste",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        2880
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('Formulario_HU8').item.json.Accion }}",
+              "value2": "Pausar reportes programados"
+            }
+          ]
+        }
+      },
+      "id": "94a6aa0c-8610-4e63-8d22-26ee971a4420",
+      "name": "Decidir_Accion_Pausar_o_Reanudar",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        2544
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.estado }}",
+              "value2": "PAUSADA"
+            }
+          ]
+        }
+      },
+      "id": "acb932c6-c64f-42f2-afab-f3ea25636db2",
+      "name": "Ya_Esta_Pausada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        2496
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "mensaje",
+              "value": "Tu suscripción ya se encuentra PAUSADA. No se realizaron cambios."
+            },
+            {
+              "name": "detalle",
+              "value": "HU8 - 400 SOLICITUD REDUNDANTE (PAUSAR)"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1e376348-ad8e-4d6a-b60d-6bb52ca88140",
+      "name": "Mensaje_YaPausada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        2320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.estado }}",
+              "value2": "ACTIVA"
+            }
+          ]
+        }
+      },
+      "id": "8dd58d06-2c91-404b-a7dd-510caea61b75",
+      "name": "Ya_Esta_Activa?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        2768
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "mensaje",
+              "value": "Tu suscripción ya se encuentra ACTIVA. No se realizaron cambios."
+            },
+            {
+              "name": "detalle",
+              "value": "HU8 - 400 SOLICITUD REDUNDANTE (REANUDAR)"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "39acbc70-2f21-4a96-a089-2250746d24b9",
+      "name": "Mensaje_YaActiva",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        2768
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Frecuencia del usuario (viene desde el lookup)\nconst freq = $('Buscar_Usuario_en_Sheet').first().json.Frecuencia || $json.frecuencia || null;\n\n// Fecha actual en horario Chile\nconst now = new Date(new Date().toLocaleString(\"en-US\", { timeZone: \"America/Santiago\" }));\n\n// Función para calcular next_run según frecuencia real\nfunction calcularNextRun(frecuencia) {\n  const fecha = new Date(now);\n\n  if (!frecuencia) {\n    // Si no viene frecuencia, por defecto 4 días\n    fecha.setDate(fecha.getDate() + 4);\n    return fecha.toISOString();\n  }\n\n  const f = frecuencia.toLowerCase().trim();\n\n  if (f.includes(\"día\") || f.includes(\"diaria\")) {\n    fecha.setDate(fecha.getDate() + 1);\n  }\n\n  else if (f.includes(\"4\")) {\n    fecha.setDate(fecha.getDate() + 4);\n  }\n\n  else if (f.includes(\"semana\")) {\n    fecha.setDate(fecha.getDate() + 7);\n  }\n\n  else if (f.includes(\"quincenal\") || f.includes(\"15\")) {\n    fecha.setDate(fecha.getDate() + 15);\n  }\n\n  else if (f.includes(\"mes\") || f.includes(\"30\")) {\n    fecha.setMonth(fecha.getMonth() + 1);\n  }\n\n  else {\n    // Fallback: 4 días\n    fecha.setDate(fecha.getDate() + 4);\n  }\n\n  return fecha.toISOString();\n}\n\n// Calcular next_run real\nconst nextRun = calcularNextRun(freq);\n\nreturn [{\n  email: $input.first().json.Email || $json.email,\n  accion: \"REANUDAR\",\n  estado_nuevo: \"ACTIVA\",\n  estado_anterior:$('Buscar_Usuario_en_Sheet').first().json.estado,\n  frecuencia: freq,\n  next_run: nextRun\n}];\n"
+      },
+      "id": "bfda0651-3f05-464f-810c-6d4f7ef221ad",
+      "name": "Calcular_NextRun_Reanudar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        3008
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+        "range": "SuscripcionLogs!A:Z",
+        "options": {}
+      },
+      "id": "659e02c7-2842-47fa-8363-f894c169bc34",
+      "name": "Registrar_Accion_HU8",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        2784
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "resultado",
+              "value": "Cambio de estado procesado correctamente."
+            },
+            {
+              "name": "nota",
+              "value": "Si pausaste, no recibirás reportes programados, pero los on-demand seguirán funcionando."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1400d8ae-384f-4c99-95c6-f5311b217928",
+      "name": "Mensaje_Final_HU8",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        3008,
+        2784
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.Email }}",
+            "estado": "PAUSADA"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2288,
+        2576
+      ],
+      "id": "ddb98f19-d47d-4d41-a395-7eb3af8c285e",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  email:  $('Formulario_HU8').first().json.email|| $json.Email,\n  accion:$('Formulario_HU8').first().json.Accion || $node.Form_HU8.json.accion,\n  estado_anterior: $('Buscar_Usuario_en_Sheet').first().json.estado,\n  estado_nuevo: $json.estado_nuevo || $json.estado || ($('Formulario_HU8').first().json.Accion === \"Pausar reportes progranados\" ? \"PAUSADA\" : \"ACTIVA\"),\n  frecuencia: $('Buscar_Usuario_en_Sheet').first().json.Frecuencia || $node.Buscar_Usuario.json.frecuencia,\n  next_run: $('Buscar_Usuario_en_Sheet').first().json.next_run|| \"SIN_CAMBIO\",\n  timestamp: new Date().toLocaleString(\"es-CL\", { timeZone: \"America/Santiago\" }),\n  hu: \"HU8\",\n  ip: \"N/A\"\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        2640
+      ],
+      "id": "00bab346-3a1b-42da-b62f-4e1ad49cf986",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.email }}",
+            "estado": "ACTIVA"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2384,
+        3008
+      ],
+      "id": "01bc8085-994d-4828-b525-54b806d2855e",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  email:  $('Formulario_HU8').first().json.email|| $json.Email,\n  accion:$('Formulario_HU8').first().json.Accion || $node.Form_HU8.json.accion,\n  estado_anterior: $('Buscar_Usuario_en_Sheet').first().json.estado,\n  estado_nuevo: $json.estado_nuevo || $json.estado || ($('Formulario_HU8').first().json.Accion === \"Pausar reportes progranados\" ? \"PAUSADA\" : \"ACTIVA\"),\n  frecuencia: $('Buscar_Usuario_en_Sheet').first().json.Frecuencia || $node.Buscar_Usuario.json.frecuencia,\n  next_run: $('Buscar_Usuario_en_Sheet').first().json.next_run|| \"SIN_CAMBIO\",\n  timestamp: new Date().toLocaleString(\"es-CL\", { timeZone: \"America/Santiago\" }),\n  hu: \"HU8\",\n  ip: \"N/A\"\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        3008
+      ],
+      "id": "b5048216-9c4d-4b81-b2a2-6f19d8a8fd8f",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Normalizar HU4": {
+      "main": [
+        [
+          {
+            "node": "HU4 Obtener Preferencias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Obtener Preferencias": {
+      "main": [
+        [
+          {
+            "node": "HU4 Build Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Build Query": {
+      "main": [
+        [
+          {
+            "node": "HU4 HTTP Indeed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HU4 HTTP Laborum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 HTTP Indeed": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Indeed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 HTTP Laborum": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Laborum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 HTTP Santander": {
+      "main": [
+        [
+          {
+            "node": "HU4 Parse Santander",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Parse Indeed": {
+      "main": [
+        [
+          {
+            "node": "HU4 Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Parse Laborum": {
+      "main": [
+        [
+          {
+            "node": "HU4 Merge Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HU4 Merge Results": {
+      "main": [
+        [
+          {
+            "node": "HU4 Build HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU4 Build HTML": {
+      "main": [
+        [
+          {
+            "node": "HU4 Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission1": {
+      "main": [
+        [
+          {
+            "node": "Normalizar HU4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission2": {
+      "main": [
+        [
+          {
+            "node": "Validar datos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar datos1": {
+      "main": [
+        [
+          {
+            "node": "Revisar Estado1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "next_run1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisar Estado1": {
+      "main": [
+        [
+          {
+            "node": "Error email1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "next_run1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Email ya registrado1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet3": {
+      "main": [
+        [
+          {
+            "node": "Email registro exitoso1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet2": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar por next_run1": {
+      "main": [
+        [
+          {
+            "node": "Normalizar payload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar payload1": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Laborum (placeholder)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Indeed (placeholder)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Santander (placeholder)1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results1": {
+      "main": [
+        [
+          {
+            "node": "If - link existe (válido)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet3": {
+      "main": [
+        [
+          {
+            "node": "Filtrar por next_run1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Merge Results1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "Merge Results1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Laborum (placeholder)1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Indeed (placeholder)1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates1": {
+      "main": [
+        [
+          {
+            "node": "Filtrar por preferencias1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar por preferencias1": {
+      "main": [
+        [
+          {
+            "node": "Build HTML1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limpiar links1": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - link existe (válido)1": {
+      "main": [
+        [
+          {
+            "node": "limpiar links1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML1": {
+      "main": [
+        [
+          {
+            "node": "Send email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email1": {
+      "main": [
+        [
+          {
+            "node": "Bump next_run1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bump next_run1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formulario_HU8": {
+      "main": [
+        [
+          {
+            "node": "Normalizar_Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar_Datos": {
+      "main": [
+        [
+          {
+            "node": "Buscar_Usuario_en_Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar_Usuario_en_Sheet": {
+      "main": [
+        [
+          {
+            "node": "Existe_Usuario?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Existe_Usuario?": {
+      "main": [
+        [
+          {
+            "node": "Decidir_Accion_Pausar_o_Reanudar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje_NoExiste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decidir_Accion_Pausar_o_Reanudar": {
+      "main": [
+        [
+          {
+            "node": "Ya_Esta_Pausada?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ya_Esta_Activa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ya_Esta_Pausada?": {
+      "main": [
+        [
+          {
+            "node": "Mensaje_YaPausada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ya_Esta_Activa?": {
+      "main": [
+        [
+          {
+            "node": "Mensaje_YaActiva",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calcular_NextRun_Reanudar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular_NextRun_Reanudar": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar_Accion_HU8": {
+      "main": [
+        [
+          {
+            "node": "Mensaje_Final_HU8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Registrar_Accion_HU8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Registrar_Accion_HU8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": false
+  },
+  "versionId": "5a38305a-b4a8-467d-abca-03539a548d67",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49182ba69a2f30f291f54966c1f37e36be55c887865edaddf2d63e89079d22d9"
+  },
+  "id": "xaRkO5L0icDs6vMb",
+  "tags": []
+}
