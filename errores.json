@@ -1,0 +1,144 @@
+{
+  "name": "errores",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Normaliza el evento de error del Error Trigger a un formato estándar\n\nconst e = $json || {};\n\n// 1) Workflow\nconst workflowName =\n  e.workflow?.name ||\n  e.workflowName ||\n  e.execution?.workflow?.name ||\n  e.execution?.workflowName ||\n  'workflow_desconocido';\n\n// 2) Objeto de ejecución y error interno\nconst exec = e.execution || {};\nconst execError = exec.error || {};\nconst errResponse = execError.errorResponse || {};\nconst reason = errResponse.reason || {};\n\n// 3) Nodo (nombre + tipo) desde varias fuentes\nconst nodeFrom =\n  e.node ||\n  execError.node ||\n  e.error?.node ||\n  (exec.lastNodeExecuted ? { name: exec.lastNodeExecuted } : {}) ||\n  {};\n\nconst nodeName =\n  nodeFrom.name ||\n  e.lastNodeExecuted ||\n  'nodo_desconocido';\n\nconst nodeTypeFull = nodeFrom.type || '';\nconst nodeType = (nodeTypeFull || '').toLowerCase();\n\n// 4) Clasificar fuente según tipo de nodo\nlet fuente = 'nodo';\n\nif (nodeType.includes('httprequest')) {\n  fuente = 'fuente_externa';\n} else if (nodeType.includes('googlesheets')) {\n  fuente = 'base_datos_hoja';\n} else if (nodeType.includes('emailsend')) {\n  fuente = 'correo';\n}\n\n// 5) Buscar mensaje de error en todas las rutas posibles\nlet mensaje =\n  execError.message ||                                   // NodeApiError.message\n  (Array.isArray(execError.messages) && execError.messages[0]) || // [\"connect ECONNREFUSED ...\"]\n  reason.message ||                                      // errorResponse.reason.message\n  e.error?.message ||\n  e.error?.description ||\n  'Error sin mensaje';\n\n// Normalizar a string y acotar a 1000 chars\nmensaje = String(mensaje).slice(0, 1000);\n\n// 6) ExecutionId\nconst executionId =\n  exec.id ||\n  e.executionId ||\n  '';\n\n// 7) Payload final estándar\nconst payload = {\n  fuente,               // fuente_externa / base_datos_hoja / correo / nodo\n  mensaje,\n  workflow: workflowName,\n  nodo: nodeName,\n  tipoNodo: nodeTypeFull,\n  executionId,\n  raw: e,               // objeto completo para debug\n};\n\nreturn [{ json: payload }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -80
+      ],
+      "id": "a5aeec4e-b8f7-4778-b3a4-726a6a2c975f",
+      "name": "Code in JavaScript9"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1017127336,
+          "mode": "list",
+          "cachedResultName": "BitacoraErrores",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1017127336"
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "timestamp",
+              "fieldValue": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}\n"
+            },
+            {
+              "fieldId": "fuente",
+              "fieldValue": "={{ $json.fuente }}"
+            },
+            {
+              "fieldId": "workflow",
+              "fieldValue": "={{ $json.workflow }}"
+            },
+            {
+              "fieldId": "nodo",
+              "fieldValue": "={{ $json.nodo }}"
+            },
+            {
+              "fieldId": "mensaje",
+              "fieldValue": "={{ $json.mensaje }}"
+            },
+            {
+              "fieldId": "raw",
+              "fieldValue": "={{ $json.raw }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "09cedb3a-801f-40b8-a1de-e73c4f9de51b",
+      "name": "HU150 - Registrar Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        416,
+        -80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -80
+      ],
+      "id": "4dac2b30-1c0d-4252-bdb4-8a38301abf92",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        -288
+      ],
+      "id": "dc6c0b47-c406-4634-9f9c-5783b37a50b1",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript9": {
+      "main": [
+        [
+          {
+            "node": "HU150 - Registrar Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "c1b80e8a-f37e-41ef-8810-4e0ff20e51d6",
+  "meta": {
+    "instanceId": "49182ba69a2f30f291f54966c1f37e36be55c887865edaddf2d63e89079d22d9"
+  },
+  "id": "TNhauMmfJfjOhzhr",
+  "tags": []
+}
