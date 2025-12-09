@@ -1,0 +1,1019 @@
+{
+  "name": "HU2 integrada con HU1",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// --- Helpers ---\nfunction norm(s){\n  return String(s || '')\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') // sin acentos\n    .toLowerCase().trim();\n}\n\nfunction formatLocal(dt){\n  const pad = n => String(n).padStart(2,'0');\n  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;\n}\n\nfunction nextFrom(freq, base = new Date()){\n  const f = norm(freq);\n  const d = new Date(base);\n  if (/30\\s*min/.test(f))              d.setMinutes(d.getMinutes() + 30);\n  else if (/^4\\s*dias?$/.test(f))      d.setDate(d.getDate() + 4);\n  else if (/^15\\s*dias?$/.test(f))     d.setDate(d.getDate() + 15);\n  else if (/semana/.test(f))           d.setDate(d.getDate() + 7);\n  else if (/mes/.test(f))              d.setMonth(d.getMonth() + 1);\n  else if (/24\\s*h/.test(f) || /dia/.test(f))\n                                       d.setDate(d.getDate() + 1);\n  else                                 d.setDate(d.getDate() + 7); // default semanal\n  return formatLocal(d);\n}\n\nconst data = items[0].json;\nconst freq = data.Frecuencia || data['Elije la frecuencia con la cual deseas recibir ofertas:'] || '';\ndata.next_run = nextFrom(freq);\ndata.estado   = 'ACTIVA';\nreturn [{ json: data }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        192
+      ],
+      "id": "e1f9218d-0652-4257-b359-3b5847b103ae",
+      "name": "next_run1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2a7bb9ee-b99d-40d9-ac05-d05048a35194",
+              "leftValue": "={{ $json['Email:'] }}",
+              "rightValue": "ERROR",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -304,
+        192
+      ],
+      "id": "983c388a-58f6-4be8-819e-2745272af728",
+      "name": "Revisar Estado1"
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('Form de registro y Cambio de preferencias').item.json['Email:'] }}",
+        "subject": "Error en el registro",
+        "html": "=<p>Hola 👋</p>\n<p><strong>Faltan datos en tu registro.</strong></p>\n<p>Por favor, completa todos los campos obligatorios y revisa que tu correo esté correctamente escrito.</p>\n\n<p>Campos incompletos detectados:</p>\n<ul>\n  {{ $('Validar datos1').item.json.faltantes }}\n</ul>\n\n\n<hr>\n<p style=\"font-size: 12px; color: #888;\">\nSistema Automatizado – Proyecto de Práctica Informática<br>\nUniversidad Andrés Bello · n8n\n</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -128,
+        -64
+      ],
+      "id": "fcf0bd97-2e28-4ee1-86c3-7349b333a676",
+      "name": "Error email1",
+      "webhookId": "bb608e3e-309e-442d-a2c7-151be37fd40d",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cdb74758-b031-42bc-9457-3084c7822e10",
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        192
+      ],
+      "id": "c3147776-6448-4eeb-9bc1-62438c99b974",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "HU1 -Registro y HU2 -  Actualizar Preferencias\n",
+        "height": 80,
+        "width": 256,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        16
+      ],
+      "id": "db72952a-c6a4-4baf-8b47-2b3eb6af1c5d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// VALIDAR Y SANITIZAR FORM PRINCIPAL (On form submission2)\n\n// Helpers\nfunction cleanText(value) {\n  return String(value ?? \"\").trim();\n}\n\nfunction toTitleCase(value) {\n  const v = cleanText(value).toLowerCase();\n  if (!v) return \"\";\n  return v\n    .split(/\\s+/)\n    .map(w => w.charAt(0).toUpperCase() + w.slice(1))\n    .join(\" \");\n}\n\nfunction isValidEmail(email) {\n  const v = cleanText(email).toLowerCase();\n  if (!v) return false;\n  const re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  return re.test(v);\n}\n\n// Listas permitidas (tomadas del propio formulario)\nconst allowedFrecuencia = [\n  \"4 Días\",\n  \"15 Días\",\n  \"Cada Semana\",\n  \"Cada Mes\"\n];\n\nconst allowedModalidad = [\n  \"Remota\",\n  \"Presencial\",\n  \"Híbrido\"\n];\n\nconst allowedRegion = [\n  \"Arica y Parinacota\",\n  \"Tarapacá\",\n  \"Antofagasta\",\n  \"Atacama\",\n  \"Coquimbo\",\n  \"Valparaíso\",\n  \"Región del Libertador Gral. Bernardo O’Higgins\",\n  \"Región del Maule\",\n  \"Región del Ñuble\",\n  \"Región del Biobío\",\n  \"Región de La Araucanía\",\n  \"Región de Los Ríos\",\n  \"Región de Los Lagos\",\n  \"Región Aisén del Gral. Carlos Ibáñez del Campo\",\n  \"Región de Magallanes y de la Antártica Chilena\",\n  \"Región Metropolitana de Santiago\"\n];\n\nconst input = $json;\n\n// 1) Leer y sanitizar básicos\nconst nombreRaw =$input.first().json['Nombre:'];\nconst apellidoRaw = $input.first().json['Apellido:'];\nconst emailRaw = $input.first().json['Email:'];\n\nconst nombre = toTitleCase(nombreRaw);\nconst apellido = toTitleCase(apellidoRaw);\nconst email = cleanText(emailRaw).toLowerCase();\n\n// 2) Leer selección de frecuencia / modalidad / región\nconst freqLabel = \"Elije la frecuencia con la cual deseas recibir ofertas:\";\nconst regionLabel = \"Elije la Región en la cual te gustaría centrar tu busqueda:\";\n\nlet frecuencia = cleanText(input.Frecuencia ?? input[freqLabel]);\nlet modalidad = cleanText(input[\"Modalidad:\"]);\nlet region    = cleanText(input[\"Región\"] ?? input[regionLabel]); // por si en algún momento cambia el label\n\n\n// 7) Si todo OK → devolvemos datos sanitizados y estado OK\nreturn [\n  {\n    json: {\n      ...input,\n      // sobrescribimos con valores limpios\n      \"Nombre:\": nombre,\n      \"Apellido:\": apellido,\n      \"Email:\": email,\n      // duplicamos por si algún nodo usa estas claves \"cortas\"\n      Frecuencia: frecuencia,\n      Modalidad: modalidad,\n      Región: region,\n      estado: \"ACTIVA\"\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        192
+      ],
+      "id": "cc8212a7-2578-4335-9fd9-55df273878e9",
+      "name": "Validar datos1"
+    },
+    {
+      "parameters": {
+        "formTitle": "Sistema automatizado para la búsqueda de prácticas profesionales en Informática",
+        "formDescription": " Este proyecto tiene como objetivo desarrollar un sistema automatizado que facilite la búsqueda y gestión de prácticas profesionales en el área de Informática. La solución permite conectar de manera eficiente a estudiantes con empresas que ofrecen oportunidades de práctica, optimizando el proceso mediante el uso de tecnología y algoritmos de filtrado inteligente.  ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Nombre:",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Apellido:",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email:",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Elije la frecuencia con la cual deseas recibir ofertas:",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "4 Días"
+                  },
+                  {
+                    "option": "15 Días"
+                  },
+                  {
+                    "option": "Cada Semana"
+                  },
+                  {
+                    "option": "Cada Mes"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Modalidad:",
+              "fieldType": "radio",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Remota"
+                  },
+                  {
+                    "option": "Presencial"
+                  },
+                  {
+                    "option": "Híbrido"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Elije la Región en la cual te gustaría centrar tu busqueda:",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Región de Arica y Parinacota"
+                  },
+                  {
+                    "option": "Región de Tarapacá"
+                  },
+                  {
+                    "option": "Región de Antofagasta"
+                  },
+                  {
+                    "option": "Región de Atacama"
+                  },
+                  {
+                    "option": "Región de Coquimbo"
+                  },
+                  {
+                    "option": "Región de Valparaíso"
+                  },
+                  {
+                    "option": "Región Metropolitana de Santiago "
+                  },
+                  {
+                    "option": "Región del Libertador General Bernardo O’Higgins"
+                  },
+                  {
+                    "option": "Región del Maule "
+                  },
+                  {
+                    "option": "Región de Ñuble "
+                  },
+                  {
+                    "option": "Región del Biobío"
+                  },
+                  {
+                    "option": "Región de La Araucanía "
+                  },
+                  {
+                    "option": "Región de Los Ríos"
+                  },
+                  {
+                    "option": "Región de Los Lagos "
+                  },
+                  {
+                    "option": "Región de Aysén del General Carlos Ibáñez del Campo "
+                  },
+                  {
+                    "option": "Región de Magallanes y de la Antártica Chilena "
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -736,
+        192
+      ],
+      "id": "70a5bb29-db5b-4bd4-8ed5-09064d210702",
+      "name": "Form de registro y Cambio de preferencias",
+      "webhookId": "65e8f343-cd85-423c-a79c-0d9c0a11d4fa",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?pli=1&gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{$('Form de registro y Cambio de preferencias').item.json['Email:'].trim()}}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        64,
+        192
+      ],
+      "id": "57e0857a-1290-43c1-a82a-f0dcd71dd3af",
+      "name": "HU2 - Verificar existencia",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "=https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "= {{ $('Form de registro y Cambio de preferencias').item.json['Nombre:'] }}",
+            "Frecuencia": "={{ $('Form de registro y Cambio de preferencias').item.json['Elije la frecuencia con la cual deseas recibir ofertas:'] }}",
+            "estado": "={{ $('Revisar Estado1').item.json.estado }}",
+            "next_run": "={{ $('next_run1').item.json.next_run }}\n",
+            "Apellido": "={{ $('Form de registro y Cambio de preferencias').item.json['Apellido:'] }}",
+            "Email": "={{ $('Form de registro y Cambio de preferencias').item.json['Email:'] }}",
+            "Modalidad": "={{ $('Form de registro y Cambio de preferencias').item.json['Modalidad:'] }}",
+            "Región": "={{ $('Form de registro y Cambio de preferencias').item.json['Elije la Región en la cual te gustaría centrar tu busqueda:'] }}",
+            "row_number": 0,
+            "last_update": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "R_Programados",
+              "displayName": "R_Programados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "R_Inmediatos",
+              "displayName": "R_Inmediatos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "last_update",
+              "displayName": "last_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        512,
+        32
+      ],
+      "id": "113746e3-d8e9-46bf-91ce-491f2518d2d2",
+      "name": "HU2 - Actualizar Pref.",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('Form de registro y Cambio de preferencias').item.json['Email:'] }}",
+        "subject": "¡Ya estas registrado!",
+        "html": "=<p>👋 Hola <strong>{{ $('Validar datos1').item.json['Nombre:'] }}</strong>,</p>\n\n<p>Tu registro ya existía en nuestro sistema y tus preferencias fueron <strong>actualizadas correctamente</strong> ✅</p>\n\n<p>📌 <strong>Nueva configuración guardada:</strong></p>\n<ul>\n  <li>📩 <strong>Email:</strong> <em>{{ $('Validar datos1').item.json['Email:'] }}</em></li>\n  <li>⏱️ <strong>Frecuencia de reportes:</strong> <em>{{ $('Validar datos1').item.json.Frecuencia }}</em></li>\n  <li>💻 <strong>Modalidad preferida:</strong> <em>{{ $('Validar datos1').item.json.Modalidad }}</em></li>\n  <li>🌍 <strong>Región de interés:</strong> <em>{{ $('Validar datos1').item.json['Región'] }}</em></li>\n</ul>\n\n<p>🎯 A partir de ahora, recibirás oportunidades de práctica ajustadas a estas preferencias.</p>\n\n<hr>\n<p style=\"font-size: 12px; color: #888;\">\nSistema Automatizado – Proyecto de Práctica Informática<br>\nUniversidad Andrés Bello · n8n\n</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        32
+      ],
+      "id": "26836360-c9ff-49e9-84d1-6c1ca444e183",
+      "name": "HU2 - Email ya registrado1",
+      "webhookId": "1f11458c-f8ff-438c-bd8f-3b3f3dcd37c1",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "=https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "= {{ $('Form de registro y Cambio de preferencias').item.json['Nombre:'] }}",
+            "Frecuencia": "={{ $('Form de registro y Cambio de preferencias').item.json['Elije la frecuencia con la cual deseas recibir ofertas:'] }}",
+            "estado": "={{ $('Revisar Estado1').item.json.estado }}",
+            "next_run": "= {{ $('next_run1').item.json.next_run }}",
+            "Apellido": "={{ $('Form de registro y Cambio de preferencias').item.json['Apellido:'] }}",
+            "Email": "={{ $('Form de registro y Cambio de preferencias').item.json['Email:'] }}",
+            "Modalidad": "={{ $('Form de registro y Cambio de preferencias').item.json['Modalidad:'] }}",
+            "Región": "={{ $('Form de registro y Cambio de preferencias').item.json['Elije la Región en la cual te gustaría centrar tu busqueda:'] }}",
+            "last_update": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "R_Programados",
+              "displayName": "R_Programados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "R_Inmediatos",
+              "displayName": "R_Inmediatos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "last_update",
+              "displayName": "last_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        288
+      ],
+      "id": "5583c370-9956-44b9-8e86-a6e6b979b0e3",
+      "name": "HU1 - Agregar Usuario Nuevo",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 808930077,
+          "mode": "list",
+          "cachedResultName": "LimitesReportes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=808930077"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $('Form de registro y Cambio de preferencias').item.json['Email:'] }}",
+            "limite": "=5",
+            "usados": "0",
+            "mes": "={{ $now.toFormat('yyyy-LL') }}\n",
+            "actualizado_ts": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}\n"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "limite",
+              "displayName": "limite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "usados",
+              "displayName": "usados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mes",
+              "displayName": "mes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "actualizado_ts",
+              "displayName": "actualizado_ts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        704,
+        288
+      ],
+      "id": "4b34d920-337b-475e-86ba-399fd6cb1736",
+      "name": "HU1 - Nuevo Limite Reporte",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('Form de registro y Cambio de preferencias').item.json['Email:'] }}\n",
+        "subject": "Confirmación de registro",
+        "html": "=<p>👋 Hola <strong>{{ $('Form de registro y Cambio de preferencias').item.json['Nombre:'] }} {{ $('Form de registro y Cambio de preferencias').item.json['Apellido:'] }}</strong>\n,</p>\n\n<p>Tu registro en el sistema automatizado de búsqueda de prácticas profesionales en informática fue <strong>exitoso</strong>.</p>\n\n<p>📩 Has indicado el siguiente correo: <em>{{ $('Form de registro y Cambio de preferencias').item.json['Email:'] }}</em></p>\n\n<p>⚙️ <strong>Preferencias registradas:</strong></p>\n<ul>\n  <li>⏱️ Frecuencia de reportes: <em>{{ $('Form de registro y Cambio de preferencias').item.json['Elije la frecuencia con la cual deseas recibir ofertas:'] }}</em></li>\n  <li>💻 Modalidad preferida: <em>{{ $('Form de registro y Cambio de preferencias').item.json['Modalidad:'] }}</em></li>\n  <li>🌍 Región de interés: <em>{{ $('Form de registro y Cambio de preferencias').item.json['Elije la Región en la cual te gustaría centrar tu busqueda:'] }}</em></li>\n</ul>\n\n<p>Gracias por registrarte 🎉</p>\n\n<p>\nA partir de ahora recibirás las oportunidades de práctica seleccionadas automáticamente según tus preferencias.<br>\nSi deseas modificar tus datos o cancelar tu suscripción, puedes hacerlo en cualquier momento respondiendo a este correo.\n</p>\n\n<hr>\n<p style=\"font-size: 12px; color: #888;\">\nSistema Automatizado – Proyecto de Práctica Informática<br>\nUniversidad Andrés Bello · n8n\n</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        912,
+        288
+      ],
+      "id": "f9905d44-f530-4068-ba83-12e0afd451e1",
+      "name": "HU1 - Email registro exitoso1",
+      "webhookId": "0fc67036-4214-4c8e-9214-24f0a46d3728",
+      "credentials": {
+        "smtp": {
+          "id": "pN6T8YGU9dLjzt07",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 338813501,
+          "mode": "list",
+          "cachedResultName": "CambiosPreferencias",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=338813501"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $('HU2 - Actualizar Pref.').item.json.Email }}",
+            "modalidad": "={{ $('HU2 - Actualizar Pref.').item.json.Modalidad }}",
+            "region": "={{ $('HU2 - Actualizar Pref.').item.json['Región'] }}",
+            "frecuencia": "={{ $('HU2 - Actualizar Pref.').item.json.Frecuencia }}",
+            "fecha": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "frecuencia",
+              "displayName": "frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "modalidad",
+              "displayName": "modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "region",
+              "displayName": "region",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        912,
+        32
+      ],
+      "id": "c834e9c1-bd9d-45dc-8a28-c409609e29ed",
+      "name": "HU2 - RegistroCambioPreferencias",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ir3Blw8QjsXap0a",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "next_run1": {
+      "main": [
+        [
+          {
+            "node": "HU2 - Verificar existencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisar Estado1": {
+      "main": [
+        [
+          {
+            "node": "Error email1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "next_run1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HU2 - Actualizar Pref.",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HU1 - Agregar Usuario Nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar datos1": {
+      "main": [
+        [
+          {
+            "node": "Revisar Estado1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form de registro y Cambio de preferencias": {
+      "main": [
+        [
+          {
+            "node": "Validar datos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU2 - Verificar existencia": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU2 - Actualizar Pref.": {
+      "main": [
+        [
+          {
+            "node": "HU2 - Email ya registrado1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU2 - Email ya registrado1": {
+      "main": [
+        [
+          {
+            "node": "HU2 - RegistroCambioPreferencias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU1 - Agregar Usuario Nuevo": {
+      "main": [
+        [
+          {
+            "node": "HU1 - Nuevo Limite Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU1 - Nuevo Limite Reporte": {
+      "main": [
+        [
+          {
+            "node": "HU1 - Email registro exitoso1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c42873d9-01b4-4f11-a9eb-9efac30c810e",
+  "meta": {
+    "instanceId": "49182ba69a2f30f291f54966c1f37e36be55c887865edaddf2d63e89079d22d9"
+  },
+  "id": "m1xxUx8mNqJiYOII",
+  "tags": []
+}
