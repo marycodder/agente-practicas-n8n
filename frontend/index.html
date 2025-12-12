@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Registro de Prácticas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  </head>
+  <body>
+    <main class="container container--centered">
+      <div class="register-header">
+        <h1>📋 Registro de Prácticas en Informática</h1>
+        <p class="subtitle">
+          ¡Inscríbete para recibir reportes periódicos con oportunidades de
+          práctica del área informática, filtradas según tus intereses!
+        </p>
+      </div>
+
+      <form id="registroForm" class="card card--form">
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <i class="ph ph-user-circle"></i> Información Personal
+          </h3>
+
+          <div class="field-group">
+            <label for="nombre"> <i class="ph ph-user"></i> Nombre </label>
+            <input
+              id="nombre"
+              name="nombre"
+              type="text"
+              placeholder="Ingresa tu nombre"
+              required
+            />
+          </div>
+
+          <div class="field-group">
+            <label for="apellido">
+              <i class="ph ph-identification-card"></i> Apellido
+            </label>
+            <input
+              id="apellido"
+              name="apellido"
+              type="text"
+              placeholder="Ingresa tu apellido"
+              required
+            />
+          </div>
+
+          <div class="field-group">
+            <label for="email"> <i class="ph ph-envelope"></i> Email </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="tucorreo@ejemplo.com"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-divider"></div>
+
+        <div class="form-section">
+          <h3 class="form-section-title">
+            <i class="ph ph-sliders-horizontal"></i> Preferencias de Búsqueda
+          </h3>
+
+          <div class="field-group">
+            <label for="frecuencia">
+              <i class="ph ph-clock"></i> Frecuencia de reportes
+            </label>
+            <select id="frecuencia" name="frecuencia" required>
+              <option value="">Selecciona una opción…</option>
+              <option value="4 Días">Cada 4 Días</option>
+              <option value="15 Días">Cada 15 Días</option>
+              <option value="Cada semana">Semanalmente</option>
+              <option value="Cada mes">Mensualmente</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="modalidad">
+              <i class="ph ph-laptop"></i> Modalidad
+            </label>
+            <select id="modalidad" name="modalidad" required>
+              <option value="">Selecciona una opción…</option>
+              <option value="Remota">🏡 Remota</option>
+              <option value="Presencial">🏢 Presencial</option>
+              <option value="Híbrido">🔄 Híbrido</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="region">
+              <i class="ph ph-map-pin"></i> Región de búsqueda
+            </label>
+            <select id="region" name="region" required>
+              <option value="">Selecciona una opción…</option>
+              <option value="Región de Arica y Parinacota">
+                Región de Arica y Parinacota (XV)
+              </option>
+              <option value="Región de Tarapacá">Región de Tarapacá (I)</option>
+              <option value="Región de Antofagasta">
+                Región de Antofagasta (II)
+              </option>
+              <option value="Región de Atacama">Región de Atacama (III)</option>
+              <option value="Región de Coquimbo">
+                Región de Coquimbo (IV)
+              </option>
+              <option value="Región de Valparaíso">
+                Región de Valparaíso (V)
+              </option>
+              <option value="Región Metropolitana de Santiago">
+                Región Metropolitana de Santiago (RM)
+              </option>
+              <option value="Región del Libertador General Bernardo O'Higgins">
+                Región del Libertador General Bernardo O'Higgins (VI)
+              </option>
+              <option value="Región del Maule">Región del Maule (VII)</option>
+              <option value="Región de Ñuble">Región de Ñuble (XVI)</option>
+              <option value="Región del Biobío">
+                Región del Biobío (VIII)
+              </option>
+              <option value="Región de La Araucanía">
+                Región de La Araucanía (IX)
+              </option>
+              <option value="Región de Los Ríos">
+                Región de Los Ríos (XIV)
+              </option>
+              <option value="Región de Los Lagos">
+                Región de Los Lagos (X)
+              </option>
+              <option
+                value="Región de Aysén del General Carlos Ibáñez del Campo"
+              >
+                Región de Aysén del General Carlos Ibáñez del Campo (XI)
+              </option>
+              <option value="Región de Magallanes y de la Antártica Chilena">
+                Región de Magallanes y de la Antártica Chilena (XII)
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-submit">
+          <i class="ph ph-paper-plane-right"></i>
+          Completar Registro
+        </button>
+
+        <p id="mensaje" class="message" hidden></p>
+      </form>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
