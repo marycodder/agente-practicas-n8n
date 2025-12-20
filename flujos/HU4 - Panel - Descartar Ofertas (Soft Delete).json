@@ -1,0 +1,477 @@
+{
+  "name": "HU4 - Panel - Descartar Ofertas (Soft Delete)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel/ofertas/delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        320
+      ],
+      "id": "9a58d11b-9513-4431-a3da-e66223a54383",
+      "name": "Webhook Delete",
+      "webhookId": "654725f4-ee28-4c64-b933-f30b3b7c5205",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1496762465,
+          "mode": "list",
+          "cachedResultName": "HistorialOfertas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1496762465"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.body.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        192,
+        320
+      ],
+      "id": "ea7fafb1-f72f-4543-a1df-906e0ae4d873",
+      "name": "Traer filas del usuario",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtenemos los links que el usuario marcó para borrar\n// (Vienen del Webhook)\nconst linksToDelete = $node[\"Webhook Delete\"].json.body.links || [];\n\n// 2. Filtramos las filas de Google Sheets que coincidan con esos links\n// y extraemos su número de fila (row_number)\nconst rowsToDelete = $input.all()\n  .filter(item => linksToDelete.includes(item.json.link))\n  .map(item => item.json.row_number);\n\n// 3. Ordenamos de MAYOR a MENOR\n// CRÍTICO: Si borras la fila 10 primero, la fila 20 sigue siendo la 20.\n// Si borras la 20 antes, la 10 sigue siendo la 10. \n// Si lo haces al revés, se mueven los índices.\nrowsToDelete.sort((a, b) => b - a);\n\n// 4. Preparamos la salida para que el nodo \"Borrar\" se ejecute una vez por cada fila\nreturn rowsToDelete.map(row => ({ json: { row_number: row } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        320
+      ],
+      "id": "37190c29-322c-4220-9024-90d3eead6f5b",
+      "name": "Calcular filas a borrar"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1496762465,
+          "mode": "list",
+          "cachedResultName": "HistorialOfertas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1496762465"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        640,
+        320
+      ],
+      "id": "2756e6db-994e-4a9b-93ea-bf30ebd5559a",
+      "name": "Borrar filas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n\"status\": \"ok\",\n\"msg\": \"Ofertas eliminadas\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        848,
+        320
+      ],
+      "id": "d07d74c5-68d1-4790-bb72-e66c6d348f73",
+      "name": "Responder OK"
+    },
+    {
+      "parameters": {
+        "jsCode": "const linksToDiscard = $node[\"Webhook Delete1\"].json.body.links || [];\n\n// Filtramos las filas que coinciden con los links seleccionados\nconst rowsToUpdate = $input.all()\n  .filter(item => item.json.link && linksToDiscard.includes(item.json.link));\n\nif (rowsToUpdate.length === 0) return [];\n\n// Preparamos la salida para actualizar el estado a \"Descartado\"\nreturn rowsToUpdate.map(item => ({\n  json: {\n    row_number: item.json.row_number,\n    estado_usuario: \"Descartado\"\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        32
+      ],
+      "id": "496fd26e-e604-4bae-919b-cecda5c6a63f",
+      "name": "Calcular filas",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1496762465,
+          "mode": "list",
+          "cachedResultName": "HistorialOfertas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1496762465"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "estado_usuario": "={{ $json.estado_usuario }}",
+            "row_number": "={{ $json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp_reporte",
+              "displayName": "timestamp_reporte",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fuente ",
+              "displayName": "fuente ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "titulo",
+              "displayName": "titulo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ubicacion",
+              "displayName": "ubicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "modalidad",
+              "displayName": "modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Clave_unica",
+              "displayName": "Clave_unica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado_usuario",
+              "displayName": "estado_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        32
+      ],
+      "id": "d3161489-2516-4835-8bb0-a6caafbce090",
+      "name": "Marcar como Descartado",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel/ofertas/delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        32
+      ],
+      "id": "bf58aa08-b43d-4bc7-8c47-20af7a195d86",
+      "name": "Webhook Delete1",
+      "webhookId": "7c2e1680-7030-46a7-b9c9-db4d345660d7"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1496762465,
+          "mode": "list",
+          "cachedResultName": "HistorialOfertas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1496762465"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.body.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        32
+      ],
+      "id": "ee6e8344-831a-4fb1-9782-97208117f80a",
+      "name": "Traer filas del usuario1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n\"status\": \"ok\",\n\"msg\": \"Ofertas descartadas correctamente\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        880,
+        32
+      ],
+      "id": "2136e965-6fac-4808-97b0-6fe27080d375",
+      "name": "Responder OK1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Delete": {
+      "main": [
+        [
+          {
+            "node": "Traer filas del usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traer filas del usuario": {
+      "main": [
+        [
+          {
+            "node": "Calcular filas a borrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular filas a borrar": {
+      "main": [
+        [
+          {
+            "node": "Borrar filas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Borrar filas": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular filas": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Descartado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como Descartado": {
+      "main": [
+        [
+          {
+            "node": "Responder OK1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Delete1": {
+      "main": [
+        [
+          {
+            "node": "Traer filas del usuario1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traer filas del usuario1": {
+      "main": [
+        [
+          {
+            "node": "Calcular filas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "565073c0-2b0b-457e-b107-7829acddb220",
+  "meta": {
+    "instanceId": "ae9ab793f09030fcf5f823ea37df64baacdc27883c24dadb80017ad358f6f0ce"
+  },
+  "id": "vFCu01qkC0v1hsxZ",
+  "tags": []
+}

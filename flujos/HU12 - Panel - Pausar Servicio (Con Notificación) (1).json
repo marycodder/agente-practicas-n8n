@@ -1,0 +1,331 @@
+{
+  "name": "HU12 - Panel - Pausar Servicio (Con Notificación)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel/usuario/pause",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        144
+      ],
+      "id": "92597fa1-a4bb-456c-b5fd-4ba25b9e741e",
+      "name": "Webhook Pause",
+      "webhookId": "6341672e-0ce2-4818-b66e-6093ec926d18"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.body.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        192,
+        144
+      ],
+      "id": "4257e214-a954-4341-9746-e5901ef337a8",
+      "name": "Traer Usuario",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  // 1. Leemos el estado y el email actual\n  const estadoActual = item.json.estado || item.json.Estado || \"\";\n  const emailActual = item.json.Email || item.json.email; // Capturamos el email\n\n  // 2. Lógica de Inversión (Toggle)\n  let nuevoEstado = \"Activa\"; \n  \n  if (estadoActual.toString().toLowerCase().trim() === \"activa\") {\n    nuevoEstado = \"Pausada\";\n  } \n\n  // 3. Retornamos el resultado\n  return {\n    json: {\n      ...item.json, // Mantiene todos los datos originales\n      \n      // Actualizamos el estado en ambas versiones\n      estado: nuevoEstado, \n      Estado: nuevoEstado,\n      \n      // Aseguramos que el email pase explícitamente en ambos formatos\n      email: emailActual,\n      Email: emailActual\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        144
+      ],
+      "id": "e7ecfb7a-6a61-41f9-8ed8-7c75e2ea225e",
+      "name": "Alternar Estado"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "estado": "={{ $json.estado }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "last_update",
+              "displayName": "last_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        640,
+        144
+      ],
+      "id": "197fa2a6-48b2-4ee4-a100-783f1a1beaf0",
+      "name": "Actualizar Estado",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n\"status\": \"ok\",\n\"msg\": \"Estado actualizado correctamente.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        848,
+        144
+      ],
+      "id": "6235ad4d-d9ee-49b7-80c1-596ccf4bc71f",
+      "name": "Responder OK"
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $node[\"Traer Usuario\"].json.Email }}",
+        "subject": "=Actualización de Estado: Tu cuenta está {{ $json.estado.toUpperCase() }} {{ $json.estado.toLowerCase() === 'activa' ? '🟢' : '⏸️' }}",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; margin: 0; padding: 0; }\n    .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }\n    .header { background-color: #1e293b; padding: 20px; text-align: center; }\n    .header h1 { color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 1px; }\n    .content { padding: 30px 20px; text-align: center; color: #334155; }\n    .status-box { \n      display: inline-block; \n      padding: 15px 30px; \n      border-radius: 8px; \n      margin: 20px 0; \n      font-weight: bold; \n      font-size: 18px;\n      /* Lógica de color dinámica según el estado */\n      background-color: {{ $json.estado.toLowerCase() === 'activa' ? '#dcfce7' : '#fef3c7' }};\n      color: {{ $json.estado.toLowerCase() === 'activa' ? '#166534' : '#b45309' }};\n      border: 1px solid {{ $json.estado.toLowerCase() === 'activa' ? '#bbf7d0' : '#fde68a' }};\n    }\n    .text-box { line-height: 1.6; font-size: 16px; margin-bottom: 20px; }\n    .btn { display: inline-block; background-color: #3b82f6; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; margin-top: 10px; }\n    .footer { background-color: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }\n  </style>\n</head>\n<body>\n\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>PANEL DE PRÁCTICAS</h1>\n    </div>\n\n    <div class=\"content\">\n      \n      <h2>Hola, {{ $node[\"Traer Usuario\"].json.Nombre }} 👋</h2>\n      \n      <p class=\"text-box\">\n        Te informamos que hemos actualizado el estado de tu suscripción según tu solicitud reciente.\n      </p>\n\n      <div class=\"status-box\">\n        Estado Actual: {{ $json.estado.toUpperCase() }}\n        {{ $json.estado.toLowerCase() === 'activa' ? '🟢' : '⏸️' }}\n      </div>\n\n      <p class=\"text-box\">\n        {{ $json.estado.toLowerCase() === 'activa' \n           ? '¡Genial! Volverás a recibir correos con las mejores ofertas laborales.' \n           : 'Entendido. No recibirás más correos hasta que decidas reactivar tu cuenta.' \n        }}\n      </p>\n\n      <a href=\"http://127.0.0.1:5500/frontend/panel.html?email={{ $node['Traer Usuario'].json.Email }}\" class=\"btn\">\n        Ir a mi Panel\n      </a>\n    </div>\n\n    <div class=\"footer\">\n      <p>Este es un mensaje automático, por favor no respondas a este correo.</p>\n      <p>© 2025 Gestión de Prácticas</p>\n    </div>\n  </div>\n\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        704,
+        384
+      ],
+      "id": "e5568f1d-57d6-439c-93b6-a72ec8910b96",
+      "name": "Notificar",
+      "webhookId": "1f11458c-f8ff-438c-bd8f-3b3f3dcd37c1",
+      "credentials": {
+        "smtp": {
+          "id": "7Nn3WCA5ZSx3GgJW",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Pause": {
+      "main": [
+        [
+          {
+            "node": "Traer Usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traer Usuario": {
+      "main": [
+        [
+          {
+            "node": "Alternar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alternar Estado": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Estado": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2d5a3140-109f-40d5-b8ca-1bf57b2781c8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae9ab793f09030fcf5f823ea37df64baacdc27883c24dadb80017ad358f6f0ce"
+  },
+  "id": "eTKxNXFLOZkYwJhH",
+  "tags": []
+}

@@ -1,0 +1,764 @@
+{
+  "name": "Formulario de registros",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// === VALIDACIÓN Y NORMALIZACIÓN DE DATOS ===\n\n// 👈 Toma los datos desde body si existen, si no, usa el json plano (por si algún día cambias el origen)\nconst data = $json.body || $json;\n\n// 🧹 Normaliza y limpia los nombres de campos del formulario\nconst nuevo = {\n  Nombre: data[\"Nombre\"] || data[\"Nombre:\"] || data[\"nombre\"] || \"\",\n  Apellido: data[\"Apellido\"] || data[\"Apellido:\"] || data[\"apellido\"] || \"\",\n  Email: data[\"Email\"] || data[\"Email:\"] || data[\"email\"] || \"\",\n  Frecuencia:\n    data[\"Frecuencia\"] ||\n    data[\"Elije la frecuencia con la cual deseas recibir ofertas:\"] ||\n    \"\",\n  Modalidad:\n    data[\"Modalidad\"] || data[\"Modalidad:\"] || data[\"modalidad\"] || \"\",\n  Region:\n    data[\"Región\"] ||\n    data[\"Region\"] ||\n    data[\"Elije la Región en la cual te gustaría centrar tu busqueda:\"] ||\n    \"\",\n};\n\n// ⚠️ Validar campos vacíos\nconst camposFaltantes = Object.entries(nuevo)\n  .filter(([_, valor]) => !valor || valor.toString().trim() === \"\")\n  .map(([clave]) => clave);\n\n// 📧 Validar formato de correo electrónico\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nconst emailValido = emailRegex.test(nuevo.Email);\n\n// 🚨 Si falta un campo o el correo es inválido → marcamos ERROR\nif (camposFaltantes.length > 0 || !emailValido) {\n  return {\n    estado: \"ERROR\",\n    mensaje: \"Faltan datos o el correo no es válido.\",\n    faltantes: camposFaltantes,\n    email: nuevo.Email,\n  };\n}\n\n// ✅ Si todo está bien, devolver datos normalizados\nreturn {\n  ...nuevo,\n  estado: \"ACTIVA\",\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        384
+      ],
+      "id": "9eb9794c-7572-4f86-b872-76f3983f8957",
+      "name": "Validar datos"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\nconst now = new Date();\n\nswitch (data.Frecuencia) {\n  case \"30 min.\":\n    now.setMinutes(now.getMinutes() + 30);\n    break;\n  case \"24 hrs\":\n  case \"24 hrs.\":\n    now.setDate(now.getDate() + 1);\n    break;\n  case \"Cada semana\":\n    now.setDate(now.getDate() + 7);\n    break;\n}\n\ndata.next_run = now.toISOString().slice(0, 19).replace(\"T\", \" \");\ndata.estado = \"ACTIVA\";\n\nreturn [{ json: data }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1184,
+        400
+      ],
+      "id": "bbae06cc-9aa8-448f-bc88-770fde3f6cbe",
+      "name": "next_run"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2a7bb9ee-b99d-40d9-ac05-d05048a35194",
+              "leftValue": "={{ $json.estado }}",
+              "rightValue": "ERROR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1360,
+        384
+      ],
+      "id": "fee0e2da-56d7-4b11-9de1-39e28b677adb",
+      "name": "Revisar Estado"
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "=={{ $json.email || $json.Email }}",
+        "subject": "Error en el registro",
+        "html": "=<p>Hola 👋</p>\n<p><strong>{{ $json.mensaje }}</strong></p>\n\n<p>Campos incompletos detectados:</p>\n<ul>\n  {{ $json.faltantes }}\n</ul>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -1200,
+        144
+      ],
+      "id": "4c20008b-7c43-45c6-844a-e93d7e706b5e",
+      "name": "Error email",
+      "webhookId": "bb608e3e-309e-442d-a2c7-151be37fd40d",
+      "credentials": {
+        "smtp": {
+          "id": "7Nn3WCA5ZSx3GgJW",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $items(\"next_run\")[0].json.Email }}",
+        "subject": "¡Ya estas registrado!",
+        "html": "=<p>\n  👋 Hola de nuevo, <strong>{{ $json.Nombre }} {{ $json.Apellido }}</strong>,\n</p>\n\n<p>\n  Notamos que intentaste registrarte nuevamente. ¡No te preocupes! 🤓<br>\n  Como ya tenías una cuenta con nosotros, simplemente <strong>hemos actualizado tus preferencias</strong> (Frecuencia, Modalidad y Región) con la información que acabas de ingresar.\n</p>\n\n<div style=\"text-align: center; margin: 30px 0;\">\n  <a href=\"http://10.40.5.21/frontend/panel.html?email={{ $json.Email }}\"\n     style=\"background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-family: sans-serif; display: inline-block;\">\n    ⚙️ Ver mi Panel de Gestión\n  </a>\n</div>\n\n<p>\n  A partir de ahora, tus reportes llegarán según esta nueva configuración.\n</p>\n\n<hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n\n<p style=\"font-size: 12px; color: #888;\">\n  Enlace directo a tu panel:<br>\n  http://10.40.5.21/frontend/panel.html?email={{ $json.Email }}\n</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        352
+      ],
+      "id": "0a509c4e-23bc-476a-be3f-2bdd20340253",
+      "name": "Email ya registrado",
+      "webhookId": "1f11458c-f8ff-438c-bd8f-3b3f3dcd37c1",
+      "credentials": {
+        "smtp": {
+          "id": "7Nn3WCA5ZSx3GgJW",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f8a3a83f-a66f-46e7-9915-21598574976f",
+              "leftValue": "={{ !!$items(\"Get row(s) in sheet\")[0].json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        496
+      ],
+      "id": "90c46f8c-e560-4d86-b10f-e3e14410cd62",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?pli=1&gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.Email.trim() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1008,
+        496
+      ],
+      "id": "fc333674-aa5f-47e5-96e5-fb865d7aa293",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "=https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "={{ $items(\"next_run\")[0].json.Nombre }}",
+            "Frecuencia": "={{ $items(\"next_run\")[0].json.Frecuencia }}",
+            "estado": "={{ $items(\"next_run\")[0].json.estado }}",
+            "next_run": "={{ $items(\"next_run\")[0].json.next_run }}",
+            "Apellido": "={{ $items(\"next_run\")[0].json.Apellido }}",
+            "Email": "={{ $items(\"next_run\")[0].json.Email }}",
+            "Modalidad": "={{ $items(\"next_run\")[0].json.Modalidad }}",
+            "Región": "={{ $items(\"next_run\")[0].json.Region }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_update",
+              "displayName": "last_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -528,
+        352
+      ],
+      "id": "221aa640-caab-446d-8b0f-78cd2930e474",
+      "name": "Update row in sheet4",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $node[\"next_run\"].json.Email }}",
+        "subject": "Confirmación de registro",
+        "html": "=<p>\n  👋 Hola <strong>{{ $node[\"next_run\"].json.Nombre }} {{ $node[\"next_run\"].json.Apellido }}</strong>,\n</p>\n\n<p>\n  ¡Gracias por registrarte en nuestro buscador de prácticas en el área informática! 🎓💻<br>\n  Hemos recibido tus datos correctamente y desde ahora comenzaremos a enviarte reportes con oportunidades\n  de práctica acordes a tus preferencias.\n</p>\n\n<div style=\"text-align: center; margin: 30px 0;\">\n  <a href=\"http://10.40.5.21/frontend/panel.html?email={{ $node['next_run'].json.Email }}\"\n     style=\"background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-family: sans-serif; display: inline-block;\">\n    👉 Ir a mi Panel de Gestión\n  </a>\n</div>\n\n<p>\n  Si en el futuro deseas cambiar tu frecuencia, modalidad o región, o <strong>pausar los envíos</strong>, \n  puedes hacerlo directamente desde el botón de arriba.\n</p>\n\n<hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n\n<p style=\"font-size: 12px; color: #888;\">\n  Si el botón no funciona, copia y pega este enlace en tu navegador:<br>\n  http://10.40.5.21/frontend/panel.html?email={{ $node['next_run'].json.Email }}\n</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        544
+      ],
+      "id": "5d6f5707-57a8-48aa-82e6-8ce6535fce76",
+      "name": "Email registro exitoso",
+      "webhookId": "0fc67036-4214-4c8e-9214-24f0a46d3728",
+      "credentials": {
+        "smtp": {
+          "id": "7Nn3WCA5ZSx3GgJW",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "=https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "={{ $node[\"next_run\"].json.Nombre }}",
+            "Frecuencia": "={{ $node[\"next_run\"].json.Frecuencia }}",
+            "estado": "={{ $node[\"next_run\"].json.estado }}",
+            "next_run": "={{ $node[\"next_run\"].json.next_run }}",
+            "Apellido": "={{ $node[\"next_run\"].json.Apellido }}",
+            "Email": "={{ $node[\"next_run\"].json.Email }}",
+            "Modalidad": "={{ $node[\"next_run\"].json.Modalidad }}",
+            "Región": "={{ $node[\"next_run\"].json.Region }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -528,
+        544
+      ],
+      "id": "a46e8ba2-59b5-483a-b5d0-f26030eb135f",
+      "name": "Append row in sheet2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "practica/form",
+        "responseMode": "lastNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1744,
+        384
+      ],
+      "id": "1ea83cd5-da76-46d3-b7e5-a6d250621d88",
+      "name": "HU1 - Registro",
+      "webhookId": "a7b13f26-a44d-4b2d-a466-8e05aee466fa"
+    },
+    {
+      "parameters": {
+        "content": "HU1 -Registro",
+        "height": 80,
+        "width": 256,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1696,
+        208
+      ],
+      "id": "e5b83ccf-e439-465a-8525-3b5580853f06",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "89337594-5b24-4e6c-8235-7b6bcf1bd7f3",
+              "name": "status",
+              "value": "ya_registrado",
+              "type": "string"
+            },
+            {
+              "id": "3b6e99d3-ad3d-49b2-984d-75c5f62e9e7c",
+              "name": "mesaje",
+              "value": "¡Ya estás registrado!.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        320
+      ],
+      "id": "58143be7-a84a-4b17-bbd0-9c0191971dd6",
+      "name": "Respuesta frontend - ya registrado."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d3f99030-f909-47e1-be72-84b82c4c0783",
+              "name": "status",
+              "value": "ok",
+              "type": "string"
+            },
+            {
+              "id": "c63400be-7d31-4b21-9e63-dbb0ef82e203",
+              "name": "mensaje",
+              "value": "¡Registro enviado con éxito! Revisa tu correo para confirmar tus reportes.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        544
+      ],
+      "id": "0f06e5eb-8ada-4193-b858-14ee80aff48e",
+      "name": "Respuesta frontend - nuevo"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "502660db-b557-4414-b817-55ee8e6a9dd5",
+              "name": "status",
+              "value": "error_de_email",
+              "type": "string"
+            },
+            {
+              "id": "3da345b5-138b-4c64-b7bc-ce09f5f1ac1b",
+              "name": "mensaje",
+              "value": "¡El email ingresado no es valido!",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1024,
+        144
+      ],
+      "id": "0d438b0c-68f8-411a-b41f-b4e2b9666d9f",
+      "name": "Email no valido"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Validar datos": {
+      "main": [
+        [
+          {
+            "node": "Revisar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "next_run": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisar Estado": {
+      "main": [
+        [
+          {
+            "node": "Error email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "next_run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet4": {
+      "main": [
+        [
+          {
+            "node": "Email ya registrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Email registro exitoso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU1 - Registro": {
+      "main": [
+        [
+          {
+            "node": "Validar datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error email": {
+      "main": [
+        [
+          {
+            "node": "Email no valido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email ya registrado": {
+      "main": [
+        [
+          {
+            "node": "Respuesta frontend - ya registrado.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email registro exitoso": {
+      "main": [
+        [
+          {
+            "node": "Respuesta frontend - nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "93f31338-5d96-4833-b21f-a5370beb00ec",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae9ab793f09030fcf5f823ea37df64baacdc27883c24dadb80017ad358f6f0ce"
+  },
+  "id": "wANufUMb4RgXwXy2",
+  "tags": []
+}

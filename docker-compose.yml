@@ -1,34 +1,52 @@
 version: "3.9"
 
 services:
+  # --- BACKEND (n8n) ---
   n8n:
     image: n8nio/n8n:latest
-    container_name: n8n
+    container_name: n8n_backend
     restart: unless-stopped
     ports:
       - "5678:5678"
     environment:
-      - N8N_HOST=10.40.5.21 # IP del servidor
+      # --- RED Y ACCESIBILIDAD ---
+      - N8N_HOST=0.0.0.0
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
-      - NODE_FUNCTION_ALLOW_EXTERNAL=*
-      - TZ=America/Santiago
-      # Para evitar problemas de CORS desde http://10.40.5.21
-      - N8N_CORS_ALLOW_ORIGINS=http://10.40.5.21
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - n8n_local_files:/files
 
+      # ✅ VOLVEMOS A LA IP REAL (CRÍTICO PARA QUE FUNCIONE EL FRONTEND)
+      - WEBHOOK_URL=http://10.40.5.21:5678/
+      - N8N_EDITOR_BASE_URL=http://10.40.5.21:5678/
+
+      # --- SEGURIDAD Y CORS ---
+      - N8N_SECURE_COOKIE=false
+      - N8N_COOKIE_SESSION_REJECT_INSECURE_CONNECTIONS=false
+      # Permitir acceso desde el frontend en puerto 8080
+      - N8N_CORS_ALLOW_ORIGINS=http://10.40.5.21:8080
+
+      # --- MODO AISLADO ---
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_TEMPLATES_ENABLED=false
+      - N8N_COMMUNITY_PACKAGES_ENABLED=false
+
+      # --- OTROS ---
+      - TZ=America/Santiago
+      - NODE_FUNCTION_ALLOW_EXTERNAL=*
+    volumes:
+      # MANTENEMOS v2 PORQUE AHÍ ESTÁN TUS CREDENCIALES
+      - n8n_data_v2:/home/node/.n8n
+
+  # --- FRONTEND (Servidor Web) ---
   frontend:
     image: nginx:alpine
-    container_name: practica-frontend
+    container_name: practica_frontend
     restart: unless-stopped
     ports:
-      - "80:80" # http://10.40.5.21
+      - "8080:80"
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
 
 volumes:
-  n8n_data:
-    external: true
-  n8n_local_files:
+  n8n_data_v2:

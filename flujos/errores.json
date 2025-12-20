@@ -1,0 +1,177 @@
+{
+  "name": "errores",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1017127336,
+          "mode": "list",
+          "cachedResultName": "BitacoraErrores",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1017127336"
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "timestamp",
+              "fieldValue": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}\n"
+            },
+            {
+              "fieldId": "fuente",
+              "fieldValue": "={{ $json.fuente }}"
+            },
+            {
+              "fieldId": "workflow",
+              "fieldValue": "={{ $json.workflow }}"
+            },
+            {
+              "fieldId": "nodo",
+              "fieldValue": "={{ $json.nodo }}"
+            },
+            {
+              "fieldId": "mensaje",
+              "fieldValue": "={{ $json.mensaje }}"
+            },
+            {
+              "fieldId": "raw",
+              "fieldValue": "={{ $json.raw }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bf9275cd-a53c-4798-b560-0e02976d20de",
+      "name": "HU150 - Registrar Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        480,
+        208
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        208
+      ],
+      "id": "15c73ed9-f0f8-48df-b3bc-6d96f02007fd",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        -32
+      ],
+      "id": "1109cec7-0d70-497e-9007-000f4e2496ff",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "buscador.practicasinformatica@gmail.com",
+        "subject": "=ALERTA de error en {{$json.workflow}} ({{$json.nodo}})",
+        "html": "=<h2>⚠ Se ha detectado un error en el flujo</h2>\n\n<p><b>Workflow:</b> {{ $json.workflow }}</p>\n<p><b>Nodo:</b> {{ $json.nodo }} ({{ $json.tipoNodo }})</p>\n<p><b>Fuente:</b> {{ $json.fuente }}</p>\n<p><b>Mensaje:</b> {{ $json.mensaje }}</p>\n<p><b>Execution ID:</b> {{ $json.executionId || 'N/D' }}</p>\n<p><b>Momento:</b> {{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}</p>\n\n<hr>\n<p style=\"font-size: 12px; color: #777;\">\n  Revisa la hoja <b>BitacoraErrores</b> para más detalle técnico.<br>\n  Este correo fue generado automáticamente por n8n.\n</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        688,
+        208
+      ],
+      "id": "f5cae8ec-dba0-4b3a-af7d-430ee14319d5",
+      "name": "Send email",
+      "webhookId": "68e759ef-28b7-467a-9fb2-b77644f0b0fe",
+      "credentials": {
+        "smtp": {
+          "id": "7Nn3WCA5ZSx3GgJW",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza el evento de error del Error Trigger a un formato estándar\n\nconst e = $json || {};\n\n// 1) Workflow\nconst workflowName =\n  e.workflow?.name ||\n  e.workflowName ||\n  e.execution?.workflow?.name ||\n  e.execution?.workflowName ||\n  'workflow_desconocido';\n\n// 2) Objeto de ejecución y error interno\nconst exec = e.execution || {};\nconst execError = exec.error || {};\nconst errResponse = execError.errorResponse || {};\nconst reason = errResponse.reason || {};\n\n// 3) Nodo (nombre + tipo) desde varias fuentes\nconst nodeFrom =\n  e.node ||\n  execError.node ||\n  e.error?.node ||\n  (exec.lastNodeExecuted ? { name: exec.lastNodeExecuted } : {}) ||\n  {};\n\nconst nodeName =\n  nodeFrom.name ||\n  e.lastNodeExecuted ||\n  'nodo_desconocido';\n\nconst nodeTypeFull = nodeFrom.type || '';\nconst nodeType = (nodeTypeFull || '').toLowerCase();\n\n// 4) Clasificar fuente según tipo de nodo\nlet fuente = 'nodo';\n\nif (nodeType.includes('httprequest')) {\n  fuente = 'fuente_externa';\n} else if (nodeType.includes('googlesheets')) {\n  fuente = 'base_datos_hoja';\n} else if (nodeType.includes('emailsend')) {\n  fuente = 'correo';\n}\n\n// 5) Buscar mensaje de error en todas las rutas posibles\nlet mensaje =\n  execError.message ||                                   // NodeApiError.message\n  (Array.isArray(execError.messages) && execError.messages[0]) || // [\"connect ECONNREFUSED ...\"]\n  reason.message ||                                      // errorResponse.reason.message\n  e.error?.message ||\n  e.error?.description ||\n  'Error sin mensaje';\n\n// Normalizar a string y acotar a 1000 chars\nmensaje = String(mensaje).slice(0, 1000);\n\n// 6) ExecutionId\nconst executionId =\n  exec.id ||\n  e.executionId ||\n  '';\n\n// 7) Payload final estándar\nconst payload = {\n  fuente,               // fuente_externa / base_datos_hoja / correo / nodo\n  mensaje,\n  workflow: workflowName,\n  nodo: nodeName,\n  tipoNodo: nodeTypeFull,\n  executionId,\n  raw: e,               // objeto completo para debug\n};\n\nreturn [{ json: payload }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        208
+      ],
+      "id": "26d066b9-4ba1-4fb6-b1f9-e3a412d79b75",
+      "name": "Normalizar Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU150 - Registrar Error": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Error": {
+      "main": [
+        [
+          {
+            "node": "HU150 - Registrar Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fc8254e4-ee0d-42fc-8c2a-7a65b9267b94",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae9ab793f09030fcf5f823ea37df64baacdc27883c24dadb80017ad358f6f0ce"
+  },
+  "id": "HmoMNRSzNNGxEIaj",
+  "tags": []
+}

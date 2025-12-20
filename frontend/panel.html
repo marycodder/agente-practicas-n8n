@@ -64,22 +64,60 @@
             <div class="field-group">
               <label for="region"><i class="ph ph-map-pin"></i> Región</label>
               <select id="region" name="region" required>
-                <option value="">Selecciona una región...</option>
-                <option value="Región Metropolitana de Santiago">
-                  Región Metropolitana
+                <option value="">Selecciona una opción...</option>
+                <option value="Región de Arica y Parinacota (XV)">
+                  Región de Arica y Parinacota (XV)
                 </option>
-                <option value="Región de Valparaíso">Valparaíso</option>
-                <option value="Región de Coquimbo">Coquimbo</option>
-                <option value="Región del Biobío">Biobío</option>
-                <option value="Región de La Araucanía">La Araucanía</option>
-                <option value="Región de Los Lagos">Los Lagos</option>
+                <option value="Región de Tarapacá (I)">
+                  Región de Tarapacá (I)
+                </option>
+                <option value="Región de Antofagasta (II)">
+                  Región de Antofagasta (II)
+                </option>
+                <option value="Región de Atacama (III)">
+                  Región de Atacama (III)
+                </option>
+                <option value="Región de Coquimbo (IV)">
+                  Región de Coquimbo (IV)
+                </option>
+                <option value="Región de Valparaíso (V)">
+                  Región de Valparaíso (V)
+                </option>
+                <option value="Región Metropolitana de Santiago (RM)">
+                  Región Metropolitana de Santiago (RM)
+                </option>
                 <option
-                  value="Región de Aysén del General Carlos Ibáñez del Campo"
+                  value="Región del Libertador General Bernardo O'Higgins (VI)"
                 >
-                  Aysén
+                  Región del Libertador General Bernardo O'Higgins (VI)
                 </option>
-                <option value="Región de Magallanes y de la Antártica Chilena">
-                  Magallanes
+                <option value="Región del Maule (VII)">
+                  Región del Maule (VII)
+                </option>
+                <option value="Región de Ñuble (XVI)">
+                  Región de Ñuble (XVI)
+                </option>
+                <option value="Región del Biobío (VIII)">
+                  Región del Biobío (VIII)
+                </option>
+                <option value="Región de La Araucanía (IX)">
+                  Región de La Araucanía (IX)
+                </option>
+                <option value="Región de Los Ríos (XIV)">
+                  Región de Los Ríos (XIV)
+                </option>
+                <option value="Región de Los Lagos (X)">
+                  Región de Los Lagos (X)
+                </option>
+                <option
+                  value="Región de Aysén del General Carlos Ibáñez del Campo (XI)"
+                >
+                  Región de Aysén del General Carlos Ibáñez del Campo (XI)
+                </option>
+                <option
+                  value="Región de Magallanes y de la Antártica Chilena (XII)"
+                >
+                  Región de Magallanes y de la Antártica Chilena (XII)
                 </option>
               </select>
             </div>
@@ -88,6 +126,50 @@
               <i class="ph ph-floppy-disk"></i> Guardar cambios
             </button>
           </form>
+
+          <div
+            style="
+              border-top: 1px solid var(--border);
+              margin-top: 2rem;
+              padding-top: 1.5rem;
+            "
+          >
+            <h3 style="font-size: 1rem; color: #cbd5e1; margin-bottom: 0.5rem">
+              <i class="ph ph-lightning"></i> Reporte Inmediato
+            </h3>
+            <p
+              style="
+                font-size: 0.85rem;
+                color: var(--text-muted);
+                margin-bottom: 1rem;
+              "
+            >
+              ¿No quieres esperar? Solicita una búsqueda ahora mismo.
+            </p>
+            <button
+              id="btnReporteInmediato"
+              type="button"
+              style="
+                background-color: #6366f1;
+                color: white;
+                border: none;
+                width: 100%;
+                padding: 10px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                transition: background 0.2s;
+              "
+              onmouseover="this.style.backgroundColor='#4f46e5'"
+              onmouseout="this.style.backgroundColor='#6366f1'"
+            >
+              <i class="ph-bold ph-paper-plane-right"></i> Solicitar Ahora
+            </button>
+          </div>
 
           <div
             style="
@@ -172,6 +254,8 @@
                 <option value="Laborum">Laborum</option>
                 <option value="Linkedin">Linkedin</option>
                 <option value="Trabajando">Trabajando</option>
+                <option value="FirstJob">FirstJob</option>
+                <option value="Computrabajo">Computrabajo</option>
               </select>
 
               <select id="filterModalidad" class="filter-select">

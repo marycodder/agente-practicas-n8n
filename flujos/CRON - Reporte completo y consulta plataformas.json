@@ -1,0 +1,2095 @@
+{
+  "name": "CRON - Reporte completo y consulta plataformas",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1xhrrKc9J4yluGKOtezrDkrAui_L5t-1FaHIoyaPLC8E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1368021364,
+          "mode": "list",
+          "cachedResultName": "Errores",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xhrrKc9J4yluGKOtezrDkrAui_L5t-1FaHIoyaPLC8E/edit#gid=1368021364"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}\n",
+            "email": "={{ $('Split In Batches').item.json.email }}",
+            "fuente": "={{ $json.fuente || \"desconocida\" }}",
+            "status": "={{ $json.statusCode || $json.code || \"\" }}",
+            "mensaje": "={{ $json.mensaje || $json.error || \"sin datos\" }}",
+            "preview": "={{ $json | json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fuente",
+              "displayName": "fuente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "preview",
+              "displayName": "preview",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1488,
+        1424
+      ],
+      "id": "09f3da29-e288-4084-b28f-cc14c01f620a",
+      "name": "Append row in sheet3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- helpers robustos para convertir next_run ---\nfunction toDate(x) {\n  if (x == null || x === '') return null;\n\n  // Log del valor original\n  console.log(\"raw next_run:\", x);\n\n  if (typeof x === 'number') {\n    // Estilo fecha Excel (por si Google Sheets lo manda así)\n    const base = new Date(Date.UTC(1899, 11, 30));\n    const d = new Date(base.getTime() + x * 86400000);\n    console.log(\"→ parsed as number:\", d);\n    return d;\n  }\n\n  let s = String(x).trim();\n  console.log(\"raw string:\", s);\n\n  // Normalizar \"2025-12-08 0:46:34\" → \"2025-12-08T00:46:34\"\n  const m = s.match(/^(\\d{4}-\\d{2}-\\d{2})\\s+(\\d{1,2}):(\\d{2}):(\\d{2})$/);\n  if (m) {\n    const [, date, h, mi, se] = m;\n    s = `${date}T${h.padStart(2, '0')}:${mi}:${se}`;\n  } else if (!s.includes('T')) {\n    s = s.replace(' ', 'T');\n  }\n\n  let d = new Date(s);\n  console.log(\"→ parsed direct:\", d);\n\n  if (!isNaN(d)) return d;\n\n  d = new Date(s + 'Z');\n  console.log(\"→ parsed as UTC:\", d);\n\n  return isNaN(d) ? null : d;\n}\n\nconst now = new Date();\nconsole.log(\"NOW:\", now);\n\nconst out = [];\nlet skipped = 0;\n\nfor (const it of items) {\n  const r = it.json || {};\n  const raw = r.next_run ?? r.Next_run ?? r['next_run'];\n\n  console.log(\"ITEM:\", r);\n  console.log(\"next_run FIELD BEFORE PARSING:\", raw);\n\n  const d = toDate(raw);\n\n  console.log(\"parsed date:\", d);\n\n  // 🔴 CAMBIO CLAVE:\n  // Si NO se puede parsear (d == null), lo dejamos pasar una vez\n  if (!d) {\n    console.log(\"⚠ next_run inválido o vacío → FORZAR PASO UNA VEZ\");\n    out.push(it);\n    continue;\n  }\n\n  if (d <= now) {\n    console.log(\"✔ next_run vencido → PASA\");\n    out.push(it);\n  } else {\n    console.log(\"❌ next_run futuro → SKIP\");\n    skipped++;\n  }\n}\n\nconsole.log(\"TOTAL PASAN:\", out.length);\n\n// Si nadie pasa, simplemente devolvemos vacío (no sigue el flujo)\nreturn out;\n"
+      },
+      "id": "bf0eeee5-38c8-4a6e-84e1-87da7bb2955a",
+      "name": "Filtrar por next_run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1696,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Normalizar payload (Versión Corregida para Múltiples Ítems) ===\n\n// Helpers\nfunction pick(obj, keys) {\n  for (const k of keys) {\n    if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') {\n      return obj[k];\n    }\n  }\n  return '';\n}\n\nfunction limpiarRegion(txt) {\n  if (!txt) return '';\n  return String(txt).split(/[–-]/)[0].trim();\n}\n\n// Procesamos TODOS los items que entran, no solo el primero\nconst resultados = items.map(item => {\n  const r = item.json || {};\n\n  // 🚧 Filtro de seguridad básico\n  if (!r.Email && !r.email && !r.Región && !r.Region && !r.region) {\n    return null; \n  }\n\n  // Extracción de datos\n  const email      = String(pick(r, ['Email','email'])).trim();\n  const modalidad  = String(pick(r, ['Modalidad','modalidad'])).trim();\n  const regionRaw  = pick(r, ['Región','Region','region','REGION']);\n  const frecuencia = String(pick(r, ['Frecuencia','frecuencia'])).trim();\n  const next_run   = pick(r, ['next_run', 'Next_run']); // Tomamos el del item actual\n  const nombre     = pick(r, ['Nombre', 'nombre']);\n\n  return {\n    json: {\n      email,\n      nombre,\n      modalidad,\n      region: limpiarRegion(regionRaw),\n      frecuencia,\n      next_run,\n      status: 'READY'\n    }\n  };\n});\n\n// Filtramos los nulos (por si hubo datos vacíos)\nreturn resultados.filter(i => i !== null);"
+      },
+      "id": "267dae1b-20b2-4df1-8136-83bb8e53a08f",
+      "name": "Normalizar payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1488,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d976634a-24c0-4572-816a-2cc6fac7c43f",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        -1264,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://r.jina.ai/https://www.laborum.cl/empleos-busqueda-practica-informatica.html",
+        "allowUnauthorizedCerts": true,
+        "responseFormat": "string",
+        "jsonParameters": true,
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "headerParametersJson": "{\n  \"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0\",\n  \"Accept\": \"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\",\n  \"Accept-Language\": \"es-CL,es;q=0.9\",\n  \"Accept-Encoding\": \"gzip, deflate, br\",\n  \"Connection\": \"keep-alive\",\n  \"Upgrade-Insecure-Requests\": \"1\",\n  \"Cache-Control\": \"no-cache\",\n  \"Pragma\": \"no-cache\"\n}\n"
+      },
+      "id": "a1d48c9b-f689-4477-9644-aecd587e98b7",
+      "name": "HTTP Laborum (placeholder)2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        816,
+        352
+      ],
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "link",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        -1376,
+        1216
+      ],
+      "id": "fd95ffcd-4319-46f8-913d-43a5f10a4a4e",
+      "name": "Remove Duplicates2",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ================================================\n// Helpers\n// ================================================\nfunction normalize(s) {\n    return String(s || \"\")\n        .normalize(\"NFD\")\n        .replace(/[\\u0300-\\u036f]/g, \"\")\n        .toLowerCase()\n        .trim();\n}\n\nfunction canonModa(s) {\n    const t = normalize(s);\n    if (!t) return \"\";\n    if (t.includes(\"remot\") || t.includes(\"teletrabajo\")) return \"remoto\";\n    if (t.includes(\"hibrid\") || t.includes(\"mixt\") || t.includes(\"semi\")) return \"hibrido\";\n    if (t.includes(\"presenc\") || t.includes(\"oficin\") || t.includes(\"onsite\")) return \"presencial\";\n    return \"\";\n}\n\n// Mapa de Regiones (Expandido)\nconst REGION_MAP = {\n    \"region metropolitana\": [\"rm\", \"metropolitana\", \"santiago\", \"las condes\", \"providencia\", \"quilicura\", \"huechuraba\", \"maipu\", \"lampa\", \"colina\", \"pudahuel\"],\n    \"region de valparaiso\": [\"region v\", \"valparaiso\", \"viña\", \"quilpue\", \"villa alemana\"],\n    \"region del biobio\": [\"region viii\", \"concepcion\", \"bio bio\", \"bío bío\", \"talcahuano\"],\n    \"region de antofagasta\": [\"region ii\", \"antofagasta\", \"calama\"],\n    \"region del maule\": [\"region vii\", \"maule\", \"talca\", \"curico\", \"linares\"],\n    \"region de ohiggins\": [\"region vi\", \"rancagua\", \"ohiggins\", \"o'higgins\"],\n};\n\nfunction canonRegion(txt) {\n    const clean = normalize(txt);\n    for (const [std, aliases] of Object.entries(REGION_MAP)) {\n        if (clean.includes(std)) return std;\n        for (const a of aliases) {\n            if (clean.includes(a)) return std;\n        }\n    }\n    return clean; \n}\n\nfunction matchRegion(prefRegion, regionItem) {\n    // Si el usuario no pidió región o dice \"todas\", pasa todo\n    if (!prefRegion || prefRegion === \"todas\" || prefRegion === \"no especificada\") return true;\n    \n    const rItem = canonRegion(regionItem);\n    const rPref = canonRegion(prefRegion);\n\n    // Coincidencia estricta o parcial\n    if (rItem === rPref) return true;\n    if (rItem.includes(rPref) || rPref.includes(rItem)) return true;\n\n    return false;\n}\n\n// ================================================\n// 1. Obtener preferencias\n// ================================================\nlet prefRegion = \"\";\nlet prefModa = \"\";\n\ntry {\n    // Intentamos buscar \"Split In Batches\", si falla probamos con \"Split In Batches1\"\n    let prefsNode = $('Split In Batches').first().json; \n    if (!prefsNode) try { prefsNode = $('Split In Batches1').first().json; } catch(e){}\n\n    const prefs = prefsNode || {};\n    prefRegion = prefs.region || prefs.Región || \"\";\n    prefModa = canonModa(prefs.modalidad || prefs.Modalidad || \"\");\n    \n} catch (e) {\n    console.log(\"Error leyendo preferencias: \", e.message);\n}\n\nconsole.log(`Usuario actual pide: Región [${prefRegion}] - Modalidad [${prefModa}]`);\n\n// ================================================\n// 2. Clasificar ofertas\n// ================================================\nconst exactas = [];\nconst alternativas = [];\n\nfor (const item of items) {\n    const json = item.json;\n\n    // --- 🚦 PASE VIP PARA ERRORES (¡CRÍTICO!) ---\n    // Si es un error (es_error: true), lo dejamos pasar DIRECTO.\n    // No filtramos por región porque los errores no tienen ubicación.\n    if (json.es_error) {\n        exactas.push({ json });\n        continue; // Saltamos el resto del bucle para este item\n    }\n    // -------------------------------------------\n\n    if (!json.link) continue;\n\n    // Buscamos región\n    const regionItem = json.region || json.ubicacion || \"\";\n    \n    // FILTRO DE REGIÓN: Si no coincide, 'continue' (salta al siguiente)\n    if (!matchRegion(prefRegion, regionItem)) {\n        continue;\n    }\n\n    // Normalizamos modalidad de la oferta\n    const modaItem = canonModa(json.modalidad) || canonModa(json.region) || \"presencial\";\n\n    // Lógica de Modalidad\n    const coincideModa =\n        prefModa === \"\" || \n        prefModa === \"no especificada\" ||\n        prefModa === modaItem ||\n        (prefModa === \"remoto\" && modaItem === \"hibrido\");\n\n    if (coincideModa) {\n        exactas.push({ json: { ...json, modalidad: modaItem } });\n    } else {\n        alternativas.push({ json: { ...json, modalidad: modaItem } });\n    }\n}\n\n// ================================================\n// 3. RETORNO\n// ================================================\n\n// Prioridad 1: Exactas (Ofertas que coinciden + Errores)\nif (exactas.length > 0) return exactas;\n\n// Prioridad 2: Alternativas (Misma región, distinta modalidad)\nif (alternativas.length > 0) {\n    return alternativas.map(item => ({\n        json: {\n            ...item.json,\n            aviso: `No hay ofertas ${prefModa}, mostrando ${item.json.modalidad}`\n        }\n    }));\n}\n\n// Prioridad 3: Nada\nreturn [{\n    json: {\n        msg: \"Sin coincidencias\",\n        prefRegion,\n        prefModa,\n        total_in: items.length\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1168,
+        1216
+      ],
+      "id": "630ffcf6-5b24-421f-987c-4f3192ecbe1b",
+      "name": "Filtrar por preferencias2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Limpia parámetros de tracking (Ignorando Errores)\nconst stripParams = [\n  'utm_source','utm_medium','utm_campaign','utm_term','utm_content',\n  'gclid','fbclid','fccid','vjs','from','ad','dq'\n];\n\nreturn items.map(({ json }) => {\n  // PASE VIP: Si es error, no tocamos nada, pasa directo\n  if (json.es_error) return { json };\n\n  if (json.link && typeof json.link === 'string') {\n    let href = json.link.trim().replace(/&amp;/g, '&');\n    try {\n      if (href.startsWith('/')) href = 'https://cl.indeed.com' + href;\n      const u = new URL(href);\n      stripParams.forEach(p => u.searchParams.delete(p));\n      u.hash = '';\n      if (u.protocol === 'http:') u.protocol = 'https:';\n      json.link = u.toString();\n    } catch {\n      json.link = href;\n    }\n  }\n  return { json };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        1216
+      ],
+      "id": "4a2056fb-67cb-401a-a906-213db7abccda",
+      "name": "limpiar links2",
+      "notes": "A veces el mismo aviso trae el mismo link con parámetros de tracking distintos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8d154a72-080e-415d-a29e-9337eba90379",
+              "leftValue": "={{ $json.link || '' }}\n",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "25fab311-6c84-4157-8f1a-c30427a7fff7",
+              "leftValue": "={{ $json.es_error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1872,
+        1360
+      ],
+      "id": "3af02f19-9d89-4a7d-9164-b3e67736d3d6",
+      "name": "If - link existe (válido)2",
+      "notes": "TRUE → limpiar links → remove duplicates → filtrar preferencias\nFALSE → log a hoja \"Errores\" (timestamp, email, fuente, status, mensaje, preview)\n"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === BUILD HTML - VERSIÓN FINAL SIMPLE ===\n\n// 1. Helpers de limpieza\nfunction esc(s) {\n  // Escapa caracteres para no romper el HTML\n  if (!s) return \"\";\n  return String(s)\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\");\n}\n\nfunction pick(...xs) {\n  for (const x of xs) if (x && String(x).trim() !== \"\") return x;\n  return \"\";\n}\n\n// 2. Preferencias (Datos del usuario)\nlet prefRegion = \"No especificada\";\nlet prefModalidad = \"No especificada\";\nlet emailTo = \"\";\nlet nombreUsuario = \"Estudiante\";\n\ntry {\n  const meta = $('Split In Batches').first().json || {};\n  prefRegion = meta.region || meta.Región || prefRegion;\n  prefModalidad = meta.modalidad || meta.Modalidad || prefModalidad;\n  emailTo = meta.email || meta.Email || \"\";\n  nombreUsuario = meta.nombre || meta.Nombre || \"Estudiante\";\n} catch (e) { }\n\n// 3. CLASIFICACIÓN (La lógica simple que pediste)\nconst ofertas = [];\nconst errores = [];\n\nfor (const item of items) {\n  const data = item.json;\n\n  // A. ¿Es un Error? -> A la lista de culpables\n  if (data.es_error) {\n    errores.push({\n      fuente: data.fuente || \"Fuente Desconocida\",\n      mensaje: data.mensaje || \"Error de conexión\"\n    });\n    continue; \n  }\n\n  // B. ¿Es una Oferta? -> A la tabla\n  const d = (data['fuente '] || data.titulo || data.link) ? data : (data.data || data);\n  const oferta = {\n    fuente: pick(d.fuente, d['fuente '], \"Desconocida\"),\n    titulo: pick(d.titulo, d.title),\n    empresa: pick(d.empresa, \"Empresa Confidencial\"),\n    link: pick(d.link, d.url),\n    aviso: d.aviso || \"\"\n  };\n\n  if (oferta.titulo && oferta.link) {\n    ofertas.push(oferta);\n  }\n}\n\nconst totalOfertas = ofertas.length;\nconst totalErrores = errores.length;\n\n// 4. CONSTRUCCIÓN VISUAL\n\n// --- CAJA ROJA DE ERRORES (Si hay alguno) ---\nlet htmlErrores = \"\";\nif (totalErrores > 0) {\n  // Creamos la lista simple: \"Laborum: Error 404\"\n  const listaItems = errores.map(e => \n    `<li><b>${esc(e.fuente)}:</b> ${esc(e.mensaje)}</li>`\n  ).join(\"\");\n\n  htmlErrores = `\n    <div style=\"margin-bottom:20px; padding:15px; background-color:#fff1f2; border: 1px solid #fda4af; border-radius:6px; color:#9f1239;\">\n      <h3 style=\"margin:0 0 8px 0; font-size:14px; font-weight:bold;\">⚠️ Hubo problemas con algunas fuentes:</h3>\n      <ul style=\"margin:0; padding-left:20px; font-size:13px;\">\n        ${listaItems}\n      </ul>\n      <p style=\"margin:8px 0 0 0; font-size:11px; opacity:0.8;\">\n        Intentaremos consultar estas fuentes de nuevo en la próxima ejecución.\n      </p>\n    </div>\n  `;\n}\n\n// --- TABLA DE OFERTAS ---\nconst rowsHtml = ofertas.map((r, i) => `\n    <tr style=\"border-bottom: 1px solid #e5e7eb;\">\n      <td style=\"padding:10px;text-align:center;color:#6b7280;font-size:12px;\">${i + 1}</td>\n      <td style=\"padding:10px;font-weight:600;color:#111827;\">${esc(r.titulo)}</td>\n      <td style=\"padding:10px;color:#374151;\">${esc(r.empresa)}</td>\n      <td style=\"padding:10px;color:#4b5563;font-size:12px;\">\n        <span style=\"background:#f3f4f6;padding:2px 6px;border-radius:4px;\">${esc(r.fuente)}</span>\n      </td>\n      <td style=\"padding:10px;text-align:center;\">\n        <a href=\"${esc(r.link)}\" target=\"_blank\" style=\"background:#2563eb;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:12px;display:inline-block;\">Ver</a>\n      </td>\n    </tr>`\n).join(\"\");\n\n// Mensaje si tabla vacía\nlet mensajeVacio = \"No hay resultados nuevos.\";\nif (totalOfertas === 0 && totalErrores > 0) {\n  mensajeVacio = \"No pudimos cargar ofertas por los errores reportados arriba.\";\n}\nconst tablaBody = rowsHtml || `<tr><td colspan=\"5\" style=\"padding:30px;text-align:center;color:#9ca3af;\">${mensajeVacio}</td></tr>`;\n\n// 5. ASUNTO DEL CORREO\nlet subject = `Resultados: ${totalOfertas} ofertas encontradas`;\nif (totalErrores > 0) {\n  subject += ` (⚠️ ${totalErrores} errores)`;\n}\nif (totalOfertas === 0 && totalErrores > 0) {\n  subject = \"Alerta: Error al buscar prácticas\";\n}\n\n// 6. HTML FINAL\nconst html = `\n<div style=\"font-family:sans-serif; max-width:800px; margin:auto; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;\">\n  <div style=\"background:#2563eb; color:white; padding:20px;\">\n    <h2 style=\"margin:0; font-size:20px;\">Hola ${esc(nombreUsuario)} 👋</h2>\n    <p style=\"margin:5px 0 0; opacity:0.9; font-size:14px;\">Reporte de Prácticas</p>\n  </div>\n\n  <div style=\"padding:20px;\">\n    <div style=\"background:#f9fafb; padding:10px; border-radius:6px; margin-bottom:20px; font-size:13px; color:#4b5563;\">\n      Búsqueda: <strong>${esc(prefRegion)}</strong> • ${esc(prefModalidad)}\n    </div>\n\n    ${htmlErrores}\n\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;\">\n      <thead>\n        <tr style=\"border-bottom:2px solid #e5e7eb; background:#f9fafb;\">\n          <th style=\"padding:10px; font-size:12px; color:#4b5563; text-align:center;\">#</th>\n          <th style=\"padding:10px; font-size:12px; color:#4b5563; text-align:left;\">TÍTULO</th>\n          <th style=\"padding:10px; font-size:12px; color:#4b5563; text-align:left;\">EMPRESA</th>\n          <th style=\"padding:10px; font-size:12px; color:#4b5563; text-align:left;\">FUENTE</th>\n          <th style=\"padding:10px; font-size:12px; color:#4b5563; text-align:center;\">LINK</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${tablaBody}\n      </tbody>\n    </table>\n    \n    <div style=\"margin-top:30px; text-align:center; font-size:12px; color:#9ca3af;\">\n      Enviado automáticamente 🤖\n    </div>\n  </div>\n</div>\n`;\n\nreturn [{\n  json: {\n    to: emailTo,\n    subject: subject,\n    html: html,\n    total: totalOfertas,\n    errores: totalErrores\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        1312
+      ],
+      "id": "e88eb1d9-de8c-45b8-a268-300952e2bf6d",
+      "name": "Build HTML2"
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        1312
+      ],
+      "id": "99e89c52-7617-42e1-8097-c2874f9a61c8",
+      "name": "Send email4",
+      "webhookId": "c8d3c268-f510-472c-b4de-4f38ab0157db",
+      "alwaysOutputData": true,
+      "credentials": {
+        "smtp": {
+          "id": "7Nn3WCA5ZSx3GgJW",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Toma el usuario actual desde \"Split In Batches\"\nconst u = $json || {};\n\n// --- Helpers ---\nfunction norm(s) {\n  return String(s || '')\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') // quita tildes\n    .toLowerCase()\n    .trim();\n}\n\nfunction formatLocal(dt) {\n  const pad = n => String(n).padStart(2, '0');\n  return (\n    dt.getFullYear() + '-' +\n    pad(dt.getMonth() + 1) + '-' +\n    pad(dt.getDate()) + ' ' +\n    pad(dt.getHours()) + ':' +\n    pad(dt.getMinutes()) + ':' +\n    pad(dt.getSeconds())\n  );\n}\n\n// --- Lógica Inteligente de Fechas ---\nfunction nextFrom(freq, base = new Date()) {\n  const f = norm(freq);\n  const d = new Date(base);\n\n  // 1. Extraer el número (si existe)\n  // Busca dígitos en el texto. Si encuentra \"3 dias\", saca el 3.\n  // Si no encuentra número (ej: \"diario\", \"semanal\", \"mensual\"), asume 1.\n  const numeros = f.match(/(\\d+)/);\n  let cantidad = numeros ? parseInt(numeros[1], 10) : 1;\n\n  // 2. Aplicar lógica según la palabra clave\n  \n  // MINUTOS\n  if (f.includes('min')) {\n    d.setMinutes(d.getMinutes() + cantidad);\n  }\n  // SEMANAS (semana, semanal, sem)\n  else if (f.includes('sem')) { \n    d.setDate(d.getDate() + (cantidad * 7));\n  }\n  // MESES (mes, mensual, meses)\n  else if (f.includes('mes')) {\n    d.setMonth(d.getMonth() + cantidad);\n  }\n  // DÍAS (dia, dias, diario)\n  else if (f.includes('dia') || f.includes('diario')) {\n    d.setDate(d.getDate() + cantidad);\n  }\n  // HORAS (detectar \"24h\" o \"horas\")\n  else if (f.includes('hora') || f.includes('h')) {\n    // Caso especial: \"24h\" a veces se usa como sinónimo de diario\n    if (f.includes('24') && f.includes('h')) {\n       d.setDate(d.getDate() + 1);\n    } else {\n       d.setHours(d.getHours() + cantidad);\n    }\n  }\n  // FALLBACK (Si no entiende nada, default 7 días)\n  else {\n    // Si viene vacío o texto raro, por seguridad 1 semana\n    d.setDate(d.getDate() + 7);\n  }\n\n  return formatLocal(d);\n}\n\n// Ejecución\nreturn [{\n  json: {\n    Email: u.email || u.Email,\n    next_run: nextFrom(u.frecuencia || u.Frecuencia)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        1312
+      ],
+      "id": "054b7011-298f-4b61-9d09-263a6b78f54d",
+      "name": "Bump next_run"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2112,
+        464
+      ],
+      "id": "162b1c0f-c87d-4d18-a537-b00bcdef2f7f",
+      "name": "Schedule Trigger2",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "content": "HU6 y HU 5\nReporte completo y consulta plataformas",
+        "height": 96,
+        "width": 304,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1552,
+        240
+      ],
+      "id": "89af2450-8cd2-432f-99df-9a96c27407cf",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "Integracion HU13",
+        "height": 80,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        240
+      ],
+      "id": "67c57079-ef93-40dd-a770-d5cdff5c6bee",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const limiteRow = $items('HU13 - Get Límite (HU6)1')[0].json;\nconst consumoRow = $items('HU13 - Get Consumo Actual1')[0].json;\n\nconst limite = Number(limiteRow.limite || 0);\nconst usados = Number(consumoRow.usados || 0);\n\nreturn [{\n  exceeded: usados >= limite,\n  limite,\n  usados\n}];\n"
+      },
+      "id": "40855c39-5da9-4998-910d-827fa24a28e6",
+      "name": "HU13 - IF excede límite? (Code)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "8575828d-ac1f-4ec8-9eab-356927b4ba57",
+              "leftValue": "={{ $json.exceeded }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "63ad467a-bd49-4c7a-a8c9-e9fef536a396",
+              "leftValue": "={{ $json.estado }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ab52a116-8e1b-44ea-8168-aa88f2ac29d0",
+      "name": "HU13 - IF (exceeded?)2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ email: String($json.email).trim().toLowerCase() }];"
+      },
+      "id": "9f1991af-c555-4d74-b018-486df0307f48",
+      "name": "HU13 - Normalizar Email1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1056,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 808930077,
+          "mode": "list",
+          "cachedResultName": "LimitesReportes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=808930077"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $('Split In Batches').item.json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "20d5216b-3af7-4826-a499-8ae3d5d67db9",
+      "name": "HU13 - Get Consumo Actual1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -592,
+        464
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 808930077,
+          "mode": "list",
+          "cachedResultName": "LimitesReportes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=808930077"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "12d79b21-1d89-4dea-bc0f-6f34d2b71d90",
+      "name": "HU13 - Get Límite (HU6)1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -832,
+        464
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "mensaje",
+              "value": "Has alcanzado tu límite mensual de reportes."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "02e6f289-c76d-40e3-bf77-793f582af723",
+      "name": "HU13 - Mensaje Límite Alcanzado2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?pli=1&gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "estado",
+              "lookupValue": "=ACTIVA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1904,
+        464
+      ],
+      "id": "06231036-24d6-4940-913a-cb0c147a0f43",
+      "name": "Obtener Preferencias1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 808930077,
+          "mode": "list",
+          "cachedResultName": "LimitesReportes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=808930077"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.email }}",
+            "limite": "={{$json.limite}}",
+            "usados": "={{ $json.usados_nuevo }}",
+            "actualizado_ts": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\")}}\n\n"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "limite",
+              "displayName": "limite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "usados",
+              "displayName": "usados",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mes",
+              "displayName": "mes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "actualizado_ts",
+              "displayName": "actualizado_ts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "19a04d14-4de7-4e6b-a432-37f33b3fc465",
+      "name": "HU13 - Incrementar Consumo2",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        624,
+        1312
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 51153146,
+          "mode": "list",
+          "cachedResultName": "CantReporte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=51153146"
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "timestamp",
+              "fieldValue": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}\n"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "=  {{ $('Split In Batches').first().json.email }}"
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "=Programado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0aef17b-c7d3-419a-bf39-de9ffba50a74",
+      "name": "HU7 - Registrar Consulta",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        -976,
+        832
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ================================================\n// Helpers\n// ================================================\nfunction normalize(s) {\n    return String(s || \"\")\n        .normalize(\"NFD\")\n        .replace(/[\\u0300-\\u036f]/g, \"\")\n        .toLowerCase()\n        .trim();\n}\n\nfunction canonModa(s) {\n    const t = normalize(s);\n    if (!t) return \"\";\n    if (t.includes(\"remot\") || t.includes(\"teletrabajo\")) return \"remoto\";\n    if (t.includes(\"hibrid\") || t.includes(\"mixt\") || t.includes(\"semi\")) return \"hibrido\";\n    if (t.includes(\"presenc\") || t.includes(\"oficin\") || t.includes(\"onsite\")) return \"presencial\";\n    return \"\";\n}\n\n// Mapa de Regiones (Expandido con Maule y otras)\nconst REGION_MAP = {\n    \"region metropolitana\": [\"rm\", \"metropolitana\", \"santiago\", \"las condes\", \"providencia\", \"quilicura\", \"huechuraba\", \"maipu\", \"lampa\", \"colina\"],\n    \"region de valparaiso\": [\"region v\", \"valparaiso\", \"viña\", \"quilpue\", \"villa alemana\"],\n    \"region del biobio\": [\"region viii\", \"concepcion\", \"bio bio\", \"bío bío\", \"talcahuano\"],\n    \"region de antofagasta\": [\"region ii\", \"antofagasta\", \"calama\"],\n    \"region del maule\": [\"region vii\", \"maule\", \"talca\", \"curico\", \"linares\"],\n    \"region de ohiggins\": [\"region vi\", \"rancagua\", \"ohiggins\", \"o'higgins\"],\n};\n\nfunction canonRegion(txt) {\n    const clean = normalize(txt);\n    for (const [std, aliases] of Object.entries(REGION_MAP)) {\n        if (clean.includes(std)) return std;\n        for (const a of aliases) {\n            if (clean.includes(a)) return std;\n        }\n    }\n    return clean; \n}\n\nfunction matchRegion(prefRegion, regionItem) {\n    // Si el usuario no pidió región o dice \"todas\", pasa todo\n    if (!prefRegion || prefRegion === \"todas\" || prefRegion === \"no especificada\") return true;\n    \n    const rItem = canonRegion(regionItem);\n    const rPref = canonRegion(prefRegion);\n\n    // Coincidencia estricta o parcial\n    if (rItem === rPref) return true;\n    if (rItem.includes(rPref) || rPref.includes(rItem)) return true;\n\n    return false;\n}\n\n// ================================================\n// 1. Obtener preferencias (CORREGIDO AQUÍ)\n// ================================================\nlet prefRegion = \"\";\nlet prefModa = \"\";\n\ntry {\n    // ⚠️ CORRECCIÓN: Usamos el nombre exacto de tu nodo \"Split In Batches\"\n    // Intentamos buscar \"Split In Batches\", si falla probamos con \"Split In Batches1\" por si acaso\n    let prefsNode = $('Split In Batches').first().json; \n    \n    // Fallback por si n8n le puso un número automáticamente\n    if (!prefsNode) try { prefsNode = $('Split In Batches1').first().json; } catch(e){}\n\n    const prefs = prefsNode || {};\n    \n    prefRegion = prefs.region || prefs.Región || \"\";\n    prefModa = canonModa(prefs.modalidad || prefs.Modalidad || \"\");\n    \n} catch (e) {\n    console.log(\"Error leyendo preferencias: \", e.message);\n}\n\nconsole.log(`Usuario actual pide: Región [${prefRegion}] - Modalidad [${prefModa}]`);\n\n// ================================================\n// 2. Clasificar ofertas\n// ================================================\nconst exactas = [];\nconst alternativas = [];\n\nfor (const item of items) {\n    const json = item.json;\n    if (!json.link) continue;\n\n    // Buscamos región en 'region' o 'ubicacion'\n    const regionItem = json.region || json.ubicacion || \"\";\n    \n    // FILTRO DE REGIÓN: Si no coincide, 'continue' (salta al siguiente)\n    if (!matchRegion(prefRegion, regionItem)) {\n        continue;\n    }\n\n    // Normalizamos modalidad de la oferta\n    const modaItem = canonModa(json.modalidad) || canonModa(json.region) || \"presencial\";\n\n    // Lógica de Modalidad\n    const coincideModa =\n        prefModa === \"\" || \n        prefModa === \"no especificada\" ||\n        prefModa === modaItem ||\n        (prefModa === \"remoto\" && modaItem === \"hibrido\");\n\n    if (coincideModa) {\n        exactas.push({ json: { ...json, modalidad: modaItem } });\n    } else {\n        alternativas.push({ json: { ...json, modalidad: modaItem } });\n    }\n}\n\n// ================================================\n// 3. RETORNO\n// ================================================\n\nif (exactas.length > 0) return exactas;\n\nif (alternativas.length > 0) {\n    return alternativas.map(item => ({\n        json: {\n            ...item.json,\n            aviso: `No hay ofertas ${prefModa}, mostrando ${item.json.modalidad}`\n        }\n    }));\n}\n\n// Si no hay nada para Maule, devolvemos un aviso vacío para que el IF lo detecte\nreturn [{\n    json: {\n        msg: \"Sin coincidencias\",\n        prefRegion,\n        prefModa,\n        total_in: items.length\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        1216
+      ],
+      "id": "bdfacee2-e825-42d9-b313-a5852d190ffd",
+      "name": "HU3 - PrepararHistorial2",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1496762465,
+          "mode": "list",
+          "cachedResultName": "HistorialOfertas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1496762465"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp_reporte": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\") }}",
+            "modalidad": "={{ $json.modalidad }}",
+            "ubicacion": "={{ $json.region }}",
+            "link": "={{ $json.link }}",
+            "fuente ": "={{ $json.fuente }}",
+            "titulo": "={{ $json.titulo }}",
+            "empresa": "={{ $json.empresa }}",
+            "Clave_unica": "={{ $json.titulo }} + {{ $json.empresa }}",
+            "email": "={{ $('Split In Batches').first().json.email }}"
+          },
+          "matchingColumns": [
+            "timestamp_reporte"
+          ],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp_reporte",
+              "displayName": "timestamp_reporte",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fuente ",
+              "displayName": "fuente ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "titulo",
+              "displayName": "titulo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ubicacion",
+              "displayName": "ubicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "modalidad",
+              "displayName": "modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Clave_unica",
+              "displayName": "Clave_unica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -480,
+        1312
+      ],
+      "id": "4e4ae55b-ea34-4170-a1d1-6d009c76dc66",
+      "name": "HU3 - Historial Ofertas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos desde los nodos anteriores\nconst limiteRow = $items('HU13 - Get Límite (HU6)1')[0].json;\nconst consumoRow = $items('HU13 - Get Consumo Actual1')[0].json;\nconst emailRow = $items('HU13 - Normalizar Email1')[0].json;\n\n// Convertir valores\nconst limite = Number(limiteRow.limite || 0);\nconst usados_actual = Number(consumoRow.usados || 0);\n\n// Incremento\nconst usados_nuevo = usados_actual + 1;\n\n// Mes actual YYYY-MM\nconst mes = new Date().toISOString().slice(0, 7);\n\n// Timestamp\nconst actualizado_ts = new Date().toISOString();\n\n// Devolver un único item limpio\nreturn [\n  {\n    email: emailRow.email,\n    limite,\n    usados_actual,\n    usados_nuevo,\n    mes,\n    actualizado_ts\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        1312
+      ],
+      "id": "e4a387ee-bde5-4514-a7b1-d7617dcc6000",
+      "name": "Incrementar Consumo HU"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Send email4').item.json.accepted[0] }}",
+            "next_run": "={{$json.next_run}}",
+            "last_update": "={{ $now.toFormat(\"yyyy-LL-dd HH:mm:ss\")}}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Apellido",
+              "displayName": "Apellido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frecuencia",
+              "displayName": "Frecuencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modalidad",
+              "displayName": "Modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Región",
+              "displayName": "Región",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_run",
+              "displayName": "next_run",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_update",
+              "displayName": "last_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        1312
+      ],
+      "id": "43315443-3b18-42d7-8b44-88b3784e02e4",
+      "name": "Update next_run1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyAj3XZnU3uJGQvAZgcqjIFAARoKYB2NO7Y"
+            },
+            {
+              "name": "cx",
+              "value": "63640653858d34b46"
+            },
+            {
+              "name": "q",
+              "value": "practica informatica computrabajo"
+            },
+            {
+              "name": "num",
+              "value": "10"
+            },
+            {
+              "name": "lr",
+              "value": "lang_es"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        576,
+        752
+      ],
+      "id": "171a0ecc-2ff9-44dc-9f8a-9982207b8e4a",
+      "name": "HTTP Request2",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// `items` es el array que entra al Code node desde el HTTP Request\nconst salida = [];\n\nfor (const item of items) {\n  // Aquí está el JSON completo que te mostró el HTTP Node\n  const respuesta = item.json;\n\n  // De ahí sacamos el arreglo `items` de Google CSE\n  const resultados = respuesta.items || [];\n\n  for (const r of resultados) {\n    salida.push({\n      json: {\n        title: r.title,\n        url: r.link\n      }\n    });\n  }\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        752
+      ],
+      "id": "19e92581-ac02-487b-b845-ef0f61678a26",
+      "name": "Code in JavaScript5",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bf79c74d-9b01-4476-81be-de9447c4500b",
+              "leftValue": "={{ $json.no_results_historial }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        1216
+      ],
+      "id": "710a71e3-f9ef-4e9e-8352-7dff47bcfeaa",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('Split In Batches').first().json.email}}",
+        "subject": "No se encontraron ofertas de práctica",
+        "html": "=  <p>👋 Hola {{ $('Split In Batches').first().json.nombre }},</p>\n\n<p>No se encontraron ofertas de práctica que coincidan con tus preferencias en esta ejecución.</p>\n\n<p>Esto puede deberse a que:</p>\n<ul>\n  <li>No hubo publicaciones nuevas en las plataformas consultadas.</li>\n  <li>No existieron ofertas que coincidieran con tu región o modalidad seleccionada.</li>\n  <li>Las fuentes revisadas (Indeed, Laborum, otras) no devolvieron resultados válidos.</li>\n</ul>\n\n<p>El sistema seguirá buscando automáticamente según tu frecuencia configurada.</p>\n\n<hr>\n<p style=\"font-size:12px;color:#888;\">\n  Sistema automatizado – Buscador de Prácticas de Informática<br>\n  No respondas a este correo.\n</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -496,
+        1056
+      ],
+      "id": "cbf6ef56-b2ce-42b4-bb08-a59731237154",
+      "name": "Send email5",
+      "webhookId": "7a8d1d54-0ce0-42b2-a5b8-9e16c9b1a570",
+      "credentials": {
+        "smtp": {
+          "id": "7Nn3WCA5ZSx3GgJW",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "buscador.practicasinformatica@gmail.com",
+        "toEmail": "={{ $('Split In Batches').item.json.email }}",
+        "subject": "Límite Alcanzado ",
+        "html": "=<p>Hola 👋</p>\n\n<p><strong>Has alcanzado tu límite mensual de reportes inmediatos.</strong></p>\n\n<p>\nHemos recibido tu solicitud de reporte ahora, pero actualmente ya utilizaste todos los reportes disponibles para este mes.\n</p>\n\n<p>\nTendrás nuevos cupos automáticamente el día:\n</p>\n\n<p style=\"font-size: 16px; font-weight: bold; margin: 8px 0;\">\n  \n</p>\n\n<p>\nRecuerda que el sistema permite un número limitado de reportes instantáneos cada mes para asegurar un servicio estable para todos los usuarios.\n</p>\n\n<p>\nMientras tanto, puedes seguir recibiendo tus reportes programados según tu frecuencia actual, o modificar tus preferencias cuando lo necesites.\n</p>\n\n<p>\nSi tienes dudas o necesitas asistencia, no dudes en responder este correo.\n</p>\n\n<hr>\n<p style=\"font-size: 12px; color: #888;\">\nSistema Automatizado – Proyecto de Práctica Informática<br>\nUniversidad Andrés Bello · n8n\n</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "id": "50c7c81f-5410-4804-95ba-96a6fecfd7ce",
+      "name": "limite2",
+      "webhookId": "bb608e3e-309e-442d-a2c7-151be37fd40d",
+      "credentials": {
+        "smtp": {
+          "id": "7Nn3WCA5ZSx3GgJW",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "allowUnauthorizedCerts": true,
+        "responseFormat": "string",
+        "options": {
+          "followAllRedirects": true,
+          "ignoreResponseCode": true
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)              AppleWebKit/537.36 (KHTML, like Gecko)              Chrome/118.0.5993.118 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "es-CL,es;q=0.9,en;q=0.8"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            },
+            {
+              "name": "Cookie",
+              "value": "ONSENT=YES+1"
+            }
+          ]
+        }
+      },
+      "id": "96eeafcb-db9c-474c-9e35-09234f04a7d9",
+      "name": "HTTP 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        976
+      ],
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "titulo",
+              "cssSelector": "h2.fs18 a.js-o-link"
+            },
+            {
+              "key": "link",
+              "cssSelector": "h2.fs18 a.js-o-link",
+              "returnValue": "attribute",
+              "attribute": "href"
+            },
+            {
+              "key": "empresa",
+              "cssSelector": "p.dFlex.vm_fx.fs16.fc_base.mt5"
+            },
+            {
+              "key": "ubicacion",
+              "cssSelector": "p.fs16.fc_base.mt5:not(.dFlex)"
+            },
+            {
+              "key": "modalidad",
+              "cssSelector": "div.fs13.mt15"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1712,
+        976
+      ],
+      "id": "dcdcbfc3-41cc-4532-b4fb-a546238f3bc6",
+      "name": "HTML2",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const regionMap = {\n  \"R.Metropolitana\": \"Región Metropolitana\",\n  \"Metropolitana\": \"Región Metropolitana\",\n  \"Santiago\": \"Región Metropolitana\",\n  \"Valparaíso\": \"Región de Valparaíso\",\n  \"Biobío\": \"Región del Biobío\",\n  \"Antofagasta\": \"Región de Antofagasta\",\n  \"Coquimbo\": \"Región de Coquimbo\",\n  \"O'Higgins\": \"Región del Libertador General Bernardo O'Higgins\",\n  \"Maule\": \"Región del Maule\",\n  \"Ñuble\": \"Región de Ñuble\",\n  \"Araucanía\": \"Región de La Araucanía\",\n  \"Los Lagos\": \"Región de Los Lagos\",\n  \"Los Ríos\": \"Región de Los Ríos\",\n  \"Aysén\": \"Región de Aysén\",\n  \"Magallanes\": \"Región de Magallanes\",\n};\n\nfunction normalizarRegion(texto) {\n  if (!texto) return \"Sin región\";\n  let limpio = texto.replace(/\\n/g, \"\").replace(/\\s+/g, \" \").trim();\n  \n  // Seguridad anti-números (para que no se cuele un \"4.4\")\n  if (/^\\d+([,.]\\d+)?$/.test(limpio) || limpio.length < 3) return \"Sin región\";\n\n  const partes = limpio.split(/[,-]/);\n  for (let i = partes.length - 1; i >= 0; i--) {\n    const fragmento = partes[i].trim();\n    if (regionMap[fragmento]) return regionMap[fragmento];\n  }\n  const ultimoFragmento = partes[partes.length - 1].trim();\n  return regionMap[ultimoFragmento] || ultimoFragmento;\n}\n\nreturn items.map(item => {\n  const datos = item.json;\n\n  // 1. LIMPIEZA DE EMPRESA (Corrección aplicada aquí)\n  let empresa = (datos.empresa || \"\")\n    .replace(/\\n/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .replace(/\\[.*?\\]/g, \"\") // <--- BORRA LO QUE ESTÁ ENTRE CORCHETES [http...]\n    .replace(/https?:\\/\\/\\S+/g, \"\") // <--- BORRA URLs SUELTAS\n    .trim();\n\n  // Borrar nota si viene al principio (ej: \"4,4 Perceptual...\")\n  empresa = empresa.replace(/^\\d+([,.]\\d+)?\\s*/, \"\"); \n\n  // 2. Separación SUELDO / MODALIDAD\n  let infoRaw = (datos.info_extra || \"\").replace(/\\n/g, \" \").replace(/\\s+/g, \" \").trim();\n  let sueldo = \"No especificado\";\n  let modalidad = \"Presencial\"; \n\n  if (infoRaw.includes(\"$\")) {\n    const matchSueldo = infoRaw.match(/(\\$[\\s\\d.,]+(\\(Mensual\\))?)/i);\n    if (matchSueldo) {\n      sueldo = matchSueldo[0].trim();\n      infoRaw = infoRaw.replace(sueldo, \"\");\n    }\n  }\n\n  const textoLower = infoRaw.toLowerCase();\n  if (textoLower.includes(\"remoto\") && textoLower.includes(\"presencial\")) modalidad = \"Híbrido/Mixto\";\n  else if (textoLower.includes(\"remoto\") || textoLower.includes(\"teletrabajo\")) modalidad = \"Remoto\";\n  else if (textoLower.includes(\"híbrido\") || textoLower.includes(\"hibrido\")) modalidad = \"Híbrido\";\n  \n  // 3. Ubicación y Links\n  let ubicacionRaw = datos.ubicacion || \"\";\n  if (/^\\d+([,.]\\d+)?$/.test(ubicacionRaw.trim())) ubicacionRaw = \"\"; // Anti-números\n  \n  const ubicacionLimpia = ubicacionRaw.replace(/\\n/g, \"\").replace(/\\s+/g, \" \").trim();\n\n  let link = datos.link || \"\";\n  if (link && !link.startsWith(\"http\")) link = \"https://cl.computrabajo.com\" + link;\n\n  return {\n    json: {\n      fuente: \"Computrabajo\",\n      titulo: (datos.titulo || \"\").trim(),\n      empresa: empresa, // Ahora saldrá limpia: \"Perceptual Consultores Ltda.\"\n      sueldo: sueldo,\n      ubicacion: ubicacionLimpia,\n      region: normalizarRegion(ubicacionLimpia),\n      modalidad: modalidad,\n      link,\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        976
+      ],
+      "id": "c9123fc2-1ba3-4af3-aa10-1eda4891692c",
+      "name": "Code in JavaScript13"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1168,
+        720
+      ],
+      "id": "ce490360-a520-4ba2-8308-3fbd5a2090a1",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agregar Resultados  (MODO: Run Once for All Items)\n\nconst unicos = [];\nconst vistos = new Set();\n\n// Aquí usamos lo que llega por la salida \"done\" del Loop Over Items\n// Es decir, TODOS los resultados de Code in JavaScript10 ya combinados.\nfor (const item of $input.all()) {\n  const dato = item.json || {};\n\n  // Solo agregamos si tiene link y no lo hemos visto antes\n  if (dato.link && !vistos.has(dato.link)) {\n    vistos.add(dato.link);\n    unicos.push({ json: dato });\n  }\n}\n\n// Por si quieres ver en consola cuántos quedaron:\nconsole.log(`Ofertas Computrabajo únicas: ${unicos.length}`);\n\nreturn unicos;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        624
+      ],
+      "id": "eab5a76a-2b24-4a5f-81a5-c100172d22a3",
+      "name": "Agregar Resultados2"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyAj3XZnU3uJGQvAZgcqjIFAARoKYB2NO7Y"
+            },
+            {
+              "name": "cx",
+              "value": "63640653858d34b46"
+            },
+            {
+              "name": "q",
+              "value": "site:firstjob.me \"práctica\" informática"
+            },
+            {
+              "name": "dateRestrict",
+              "value": "w1"
+            },
+            {
+              "name": "gl",
+              "value": "cl"
+            },
+            {
+              "name": "num",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0e80873b-ca9d-4938-a9a3-73469d7da8e9",
+      "name": "Google Search (FirstJob)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        848,
+        112
+      ],
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const salida = [];\n\nfor (const item of items) {\n  const json = item.json;\n  \n  // Si Google devolvió un error explícito\n  if (json.error || (json.statusCode && json.statusCode >= 400)) {\n      // No hacemos nada aquí, dejaremos que el bloque final lance el error\n  } else {\n      const resultados = json.items || [];\n      for (const r of resultados) {\n        salida.push({ json: { link: r.link } });\n      }\n  }\n}\n\n// --- EL SALVAVIDAS (Esto faltaba) ---\n// Si la lista está vacía, asumimos que hubo un error o no hay datos.\n// Pasamos un objeto de error para que el flujo NO se detenga.\nif (salida.length === 0) {\n    return [{\n        json: {\n            es_error: true,\n            fuente: \"FirstJob\",\n            mensaje: \"Error de API Google o Sin Resultados\",\n            link: \"ERROR_FIRSTJOB\" // Necesario para el deduplicador\n        }\n    }];\n}\n\nreturn salida;"
+      },
+      "id": "31afba92-6a2e-4fd1-8d4e-f0b41fd3107e",
+      "name": "Prep Links FJ1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        112
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.link }}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "1e7b61d0-3dff-42b8-9841-c1140faf3ffc",
+      "name": "HTTP FirstJob1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1440,
+        112
+      ],
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "og_title",
+              "cssSelector": "meta[property=\\\"og:title\\\"]",
+              "returnValue": "attribute",
+              "attribute": "content"
+            },
+            {
+              "key": "og_desc",
+              "cssSelector": "meta[property=\\\"og:description\\\"]",
+              "returnValue": "attribute",
+              "attribute": "content"
+            },
+            {
+              "key": "json_ld",
+              "cssSelector": "script[type=\\\"application/ld+json\\\"]"
+            },
+            {
+              "key": "h1_title",
+              "cssSelector": "h1"
+            },
+            {
+              "key": "page_title",
+              "cssSelector": "title"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8fad2ed5-5b03-456a-8861-2eb937af5524",
+      "name": "HTML FirstJob1",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1,
+      "position": [
+        1664,
+        112
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- 1. PASE VIP PARA ERRORES (Al principio de todo) ---\n// Si llega el objeto de error que creamos en el nodo anterior, lo dejamos pasar.\nconst primerItem = items[0] ? items[0].json : {};\n\nif (primerItem.es_error) {\n    return [{\n        json: {\n            fuente: \"FirstJob\",\n            es_error: true,\n            mensaje: \"Problema al consultar Google/FirstJob\",\n            link: \"ERROR_FIRSTJOB\"\n        }\n    }];\n}\n\n// --- CÓDIGO NORMAL (Si son ofertas reales) ---\nconst linksOriginales = $('Prep Links FJ1').all(); \nconst empresasVIP = [\"Walmart\", \"Nestlé\", \"AFP Capital\", \"Cencosud\", \"Falabella\", \"Banco de Chile\", \"Streat Food\", \"Arcoprime\", \"KPMG\", \"SGS\", \"Nubox\", \"Transbank\", \"Enel\", \"Codelco\"];\n\nreturn items.map((item, i) => {\n  const datos = item.json;\n  \n  // Recuperar Datos\n  let rawTitle = datos.og_title || datos.h1_title || datos.page_title || \"\";\n  let rawDesc  = datos.og_desc || \"\";\n  let empresa  = \"Empresa Confidencial\";\n  \n  // JSON-LD\n  if (datos.json_ld) {\n      try {\n          const jsonLimpio = JSON.parse(datos.json_ld);\n          if (jsonLimpio.hiringOrganization && jsonLimpio.hiringOrganization.name) {\n              empresa = jsonLimpio.hiringOrganization.name;\n          } else if (Array.isArray(jsonLimpio)) {\n              const job = jsonLimpio.find(o => o['@type'] === 'JobPosting');\n              if (job && job.hiringOrganization) empresa = job.hiringOrganization.name;\n          }\n      } catch (e) {}\n  }\n\n  // Limpieza Título\n  let titulo = rawTitle\n    .replace(/\\(ID:\\s*\\d+\\)/i, \"\") \n    .replace(/\\s*-\\s*Práctica, Pasantía, Internship y Primeros Trabajos/ig, \"\")\n    .replace(/\\|\\s*FirstJob/i, \"\")\n    .replace(/\\-\\s*FirstJob/i, \"\")\n    .replace(/FirstJob/i, \"\")\n    .replace(/([\\u2700-\\u27BF]|[\\uE000-\\uF8FF]|\\uD83C[\\uDC00-\\uDFFF]|\\uD83D[\\uDC00-\\uDFFF])/g, '')\n    .trim();\n\n  // Detective Empresa\n  if (empresa === \"Empresa Confidencial\") {\n      let textoGigante = (titulo + \" \" + rawDesc).toLowerCase();\n      for (const vip of empresasVIP) {\n          if (textoGigante.includes(vip.toLowerCase())) {\n              empresa = vip;\n              break;\n          }\n      }\n      if (empresa === \"Empresa Confidencial\" && rawDesc) {\n        const match = rawDesc.match(/(?:en|parte de|somos|equipo de|invita a)\\s+([A-ZÁÉÍÓÚ0-9][a-zA-Z0-9áéíóúÁÉÍÓÚ\\s\\.\\-]+?)(?:,|\\.|!|y\\s|que\\s|\\sbuscamos|\\ste\\s)/);\n        if (match && match[1]) {\n           let nombreCapturado = match[1].trim();\n           if (nombreCapturado.length < 35 && nombreCapturado.length > 2 && !nombreCapturado.toLowerCase().includes(\"práctica\")) {\n             empresa = nombreCapturado;\n           }\n        }\n      }\n  }\n\n  // Modalidad y Región\n  let textoAnalisis = (titulo + \" \" + rawDesc).toLowerCase();\n  let modalidad = \"Presencial\"; \n  if (textoAnalisis.includes(\"remoto\")) modalidad = \"Remoto\";\n  else if (textoAnalisis.includes(\"híbrido\") || textoAnalisis.includes(\"hibrido\")) modalidad = \"Híbrido\";\n\n  let region = \"Región Metropolitana\"; \n  if (textoAnalisis.includes(\"valparaíso\") || textoAnalisis.includes(\"viña\")) region = \"Región de Valparaíso\";\n  else if (textoAnalisis.includes(\"biobío\") || textoAnalisis.includes(\"concepción\")) region = \"Región del Biobío\";\n  else if (textoAnalisis.includes(\"antofagasta\")) region = \"Región de Antofagasta\";\n\n  let link = linksOriginales[i]?.json?.link || \"https://firstjob.me\";\n\n  return {\n    json: {\n      fuente: \"FirstJob\",\n      titulo,\n      empresa, \n      region,\n      ubicacion: region,\n      modalidad,\n      link\n    }\n  };\n})\n.filter(item => {\n    // Filtro final: Si es una oferta real, debe tener título válido\n    const t = item.json.titulo;\n    return t && t.length > 5 && !t.includes(\"Práctica, Pasantía\");\n});"
+      },
+      "id": "cec7e514-8311-498e-9850-76da3337b58e",
+      "name": "Parse FirstJob1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2704,
+        1088
+      ],
+      "id": "85843786-75a9-464d-8431-4858dc8bd7ce",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CONFIGURACIÓN: Cambia esto según la rama (ej: \"FirstJob\", \"Laborum\", \"Computrabajo\")\nconst FUENTE_NOMBRE = \"Laborum\"; \n\nconst resultados = [];\nconst errores = [];\n\n// Analizamos la entrada del nodo HTTP/Google anterior\nfor (const item of items) {\n  const json = item.json;\n  \n  // DETECCIÓN DE ERROR (Nativo de n8n o HTTP Status malo)\n  // Si n8n atrapó un error o el status code es >= 400\n  if (json.error || (json.statusCode && json.statusCode >= 400)) {\n    errores.push({\n      fuente: FUENTE_NOMBRE,\n      es_error: true,\n      codigo: json.statusCode || json.error.code || 500, // Default a 500 si no hay código\n      mensaje_tecnico: json.message || json.error.message || \"Error desconocido\"\n    });\n  } else {\n    // ÉXITO: Pasamos el item tal cual (o procesado)\n    // Aseguramos que tenga la marca de la fuente por si acaso\n    resultados.push({\n      json: {\n        ...json,\n        fuente: FUENTE_NOMBRE,\n        es_error: false\n      }\n    });\n  }\n}\n\n// LÓGICA DE SALIDA\n// Si hubo error, pasamos el objeto de error para que el Merge lo reciba.\n// Si hubo éxito, pasamos los resultados.\nif (errores.length > 0) {\n  return [{ json: errores[0] }]; // Retornamos el error formateado\n}\n\nreturn resultados.map(r => ({ json: r.json }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        384
+      ],
+      "id": "29be7af7-d5f1-4444-9688-fd3eeb589435",
+      "name": "Normalizar Respuesta Fuente"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CONFIGURACIÓN: Cambia esto según la rama (ej: \"FirstJob\", \"Laborum\", \"Computrabajo\")\nconst FUENTE_NOMBRE = \"FirstJob\"; \n\nconst resultados = [];\nconst errores = [];\n\n// Analizamos la entrada del nodo HTTP/Google anterior\nfor (const item of items) {\n  const json = item.json;\n  \n  // DETECCIÓN DE ERROR (Nativo de n8n o HTTP Status malo)\n  // Si n8n atrapó un error o el status code es >= 400\n  if (json.error || (json.statusCode && json.statusCode >= 400)) {\n    errores.push({\n      fuente: FUENTE_NOMBRE,\n      es_error: true,\n      codigo: json.statusCode || json.error.code || 500, // Default a 500 si no hay código\n      mensaje_tecnico: json.message || json.error.message || \"Error desconocido\"\n    });\n  } else {\n    // ÉXITO: Pasamos el item tal cual (o procesado)\n    // Aseguramos que tenga la marca de la fuente por si acaso\n    resultados.push({\n      json: {\n        ...json,\n        fuente: FUENTE_NOMBRE,\n        es_error: false\n      }\n    });\n  }\n}\n\n// LÓGICA DE SALIDA\n// Si hubo error, pasamos el objeto de error para que el Merge lo reciba.\n// Si hubo éxito, pasamos los resultados.\nif (errores.length > 0) {\n  return [{ json: errores[0] }]; // Retornamos el error formateado\n}\n\nreturn resultados.map(r => ({ json: r.json }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        112
+      ],
+      "id": "da9efc38-ab09-409f-9354-f7968d7695d2",
+      "name": "Normalizar Respuesta Fuente1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CONFIGURACIÓN: Cambia esto según la rama (ej: \"FirstJob\", \"Laborum\", \"Computrabajo\")\nconst FUENTE_NOMBRE = \"FirstJob\"; \n\nconst resultados = [];\nconst errores = [];\n\n// Analizamos la entrada del nodo HTTP/Google anterior\nfor (const item of items) {\n  const json = item.json;\n  \n  // DETECCIÓN DE ERROR (Nativo de n8n o HTTP Status malo)\n  // Si n8n atrapó un error o el status code es >= 400\n  if (json.error || (json.statusCode && json.statusCode >= 400)) {\n    errores.push({\n      fuente: FUENTE_NOMBRE,\n      es_error: true,\n      codigo: json.statusCode || json.error.code || 500, // Default a 500 si no hay código\n      mensaje_tecnico: json.message || json.error.message || \"Error desconocido\"\n    });\n  } else {\n    // ÉXITO: Pasamos el item tal cual (o procesado)\n    // Aseguramos que tenga la marca de la fuente por si acaso\n    resultados.push({\n      json: {\n        ...json,\n        fuente: FUENTE_NOMBRE,\n        es_error: false\n      }\n    });\n  }\n}\n\n// LÓGICA DE SALIDA\n// Si hubo error, pasamos el objeto de error para que el Merge lo reciba.\n// Si hubo éxito, pasamos los resultados.\nif (errores.length > 0) {\n  return [{ json: errores[0] }]; // Retornamos el error formateado\n}\n\nreturn resultados.map(r => ({ json: r.json }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        112
+      ],
+      "id": "c0fc61f7-a695-4568-99f9-6e81346f4c40",
+      "name": "Normalizar Respuesta Fuente2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CONFIGURACIÓN: Cambia esto según la rama (ej: \"FirstJob\", \"Laborum\", \"Computrabajo\")\nconst FUENTE_NOMBRE = \"Computrabajo\"; \n\nconst resultados = [];\nconst errores = [];\n\n// Analizamos la entrada del nodo HTTP/Google anterior\nfor (const item of items) {\n  const json = item.json;\n  \n  // DETECCIÓN DE ERROR (Nativo de n8n o HTTP Status malo)\n  // Si n8n atrapó un error o el status code es >= 400\n  if (json.error || (json.statusCode && json.statusCode >= 400)) {\n    errores.push({\n      fuente: FUENTE_NOMBRE,\n      es_error: true,\n      codigo: json.statusCode || json.error.code || 500, // Default a 500 si no hay código\n      mensaje_tecnico: json.message || json.error.message || \"Error desconocido\"\n    });\n  } else {\n    // ÉXITO: Pasamos el item tal cual (o procesado)\n    // Aseguramos que tenga la marca de la fuente por si acaso\n    resultados.push({\n      json: {\n        ...json,\n        fuente: FUENTE_NOMBRE,\n        es_error: false\n      }\n    });\n  }\n}\n\n// LÓGICA DE SALIDA\n// Si hubo error, pasamos el objeto de error para que el Merge lo reciba.\n// Si hubo éxito, pasamos los resultados.\nif (errores.length > 0) {\n  return [{ json: errores[0] }]; // Retornamos el error formateado\n}\n\nreturn resultados.map(r => ({ json: r.json }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        720
+      ],
+      "id": "d7b32f45-b470-4ab4-8380-a29c606f23fa",
+      "name": "Normalizar Respuesta Fuente3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CONFIGURACIÓN: Cambia esto según la rama (ej: \"FirstJob\", \"Laborum\", \"Computrabajo\")\nconst FUENTE_NOMBRE = \"Computrabajo\"; \n\nconst resultados = [];\nconst errores = [];\n\n// Analizamos la entrada del nodo HTTP/Google anterior\nfor (const item of items) {\n  const json = item.json;\n  \n  // DETECCIÓN DE ERROR (Nativo de n8n o HTTP Status malo)\n  // Si n8n atrapó un error o el status code es >= 400\n  if (json.error || (json.statusCode && json.statusCode >= 400)) {\n    errores.push({\n      fuente: FUENTE_NOMBRE,\n      es_error: true,\n      codigo: json.statusCode || json.error.code || 500, // Default a 500 si no hay código\n      mensaje_tecnico: json.message || json.error.message || \"Error desconocido\"\n    });\n  } else {\n    // ÉXITO: Pasamos el item tal cual (o procesado)\n    // Aseguramos que tenga la marca de la fuente por si acaso\n    resultados.push({\n      json: {\n        ...json,\n        fuente: FUENTE_NOMBRE,\n        es_error: false\n      }\n    });\n  }\n}\n\n// LÓGICA DE SALIDA\n// Si hubo error, pasamos el objeto de error para que el Merge lo reciba.\n// Si hubo éxito, pasamos los resultados.\nif (errores.length > 0) {\n  return [{ json: errores[0] }]; // Retornamos el error formateado\n}\n\nreturn resultados.map(r => ({ json: r.json }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        976
+      ],
+      "id": "b7e2fb97-83f8-4039-9e01-bc6e21effc7a",
+      "name": "Normalizar Respuesta Fuente4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// PARSER LABORUM – Con \"Pase de Error\"\n\nconst item = items[0].json;\n\n// --- 1. DETECCIÓN DE ERROR (¡Esto es lo que faltaba!) ---\n// Si el nodo HTTP anterior falló, n8n suele mandar un campo 'error' o 'statusCode' malo.\nif (item.error || (item.statusCode && item.statusCode >= 400)) {\n    // ¡Es un error! No intentamos parsear. Pasamos la alerta roja.\n    return [{\n        json: {\n            fuente: \"Laborum\",\n            es_error: true, // Esta es la bandera que activa la caja roja\n            codigo: item.statusCode || 500,\n            mensaje: \"Error de conexión o página no encontrada (Simulado)\"\n        }\n    }];\n}\n\n// --- 2. EXTRACCIÓN DE CONTENIDO ---\nconst rawData = item.data || item.content || \"\";\n// Convertimos a texto por si acaso llega un objeto raro\nconst raw = typeof rawData === 'object' ? JSON.stringify(rawData) : String(rawData);\n\nconst text = raw.includes(\"Markdown Content:\") \n  ? raw.split(\"Markdown Content:\")[1] \n  : raw;\n\n// --- 3. LÓGICA DE BÚSQUEDA (Tu código original) ---\nconst regex = /\\[([\\s\\S]*?)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g;\n\nfunction limpiarEspacios(s) {\n  return String(s || \"\").replace(/\\n+/g, \" \").replace(/\\s+/g, \" \").trim();\n}\n\nconst ofertas = [];\n\nwhile (true) {\n  const m = regex.exec(text);\n  if (!m) break;\n\n  let inside = m[1];\n  const url  = m[2].trim();\n\n  if (/\\.(jpg|jpeg|png|gif)(\\?|$)/i.test(url)) continue;\n\n  inside = limpiarEspacios(inside);\n  let segments = inside.split(\"###\").map(limpiarEspacios).filter(s => s && !s.startsWith(\"![Image\"));\n\n  if (!segments.length) continue;\n\n  let tituloRaw = segments.find(s => /Pr[aá]ctica|Alumno/i.test(s)) || segments[0];\n  const matchTitulo = tituloRaw.match(/(Pr[aá]ctica|Alumno[a]? en Pr[aá]ctica)[^#]+/i);\n  let titulo = (matchTitulo ? matchTitulo[0] : tituloRaw).replace(/-{2,}.*$/, \"\").trim();\n  titulo = titulo.replace(/^\\s*(más de\\s+\\d+\\s+d[ií]as?|[\\d.,]+\\s*(horas?|d[ií]as?))\\s+/i, \"\");\n\n  let empresaSeg = segments[1] || \"\";\n  if (/^(Publicado|Actualizado)/i.test(empresaSeg)) empresaSeg = \"\";\n  \n  const idxEn = empresaSeg.search(/\\sEn\\s/i);\n  if (idxEn > 0) empresaSeg = empresaSeg.slice(0, idxEn);\n  const punto = empresaSeg.indexOf(\".\");\n  if (punto > 0) empresaSeg = empresaSeg.slice(0, punto);\n\n  let empresa = limpiarEspacios(empresaSeg);\n  if (!empresa) empresa = \"Sin empresa\";\n\n  const regionCandidates = segments.filter(s => /Región|Region/i.test(s));\n  let region = \"Sin región\";\n  if (regionCandidates.length) {\n    regionCandidates.sort((a, b) => a.length - b.length);\n    region = limpiarEspacios(regionCandidates[0]);\n  }\n\n  let modaSeg = [...segments].reverse().find(s => /Presencial|Híbrido|Hibrido|Remoto|Teletrabajo|Mixta/i.test(s)) || \"\";\n  let modalidad = \"Presencial\";\n  const mNorm = modaSeg.toLowerCase();\n  if (mNorm.includes(\"remoto\")) modalidad = \"Remoto\";\n  else if (mNorm.includes(\"híbrido\")) modalidad = \"Híbrido\";\n\n  ofertas.push({\n    json: {\n      fuente: \"Laborum\",\n      titulo,\n      empresa,\n      region,\n      modalidad,\n      link: url,\n    },\n  });\n}\n\n// Si no hay ofertas pero tampoco era un error técnico, devolvemos array vacío\n// (El Build HTML se encargará de decir \"No hay resultados\")\nif (!ofertas.length) return [];\n\nreturn ofertas;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        592
+      ],
+      "id": "ff4a64d3-6ecf-41cc-a762-759a33f60222",
+      "name": "parser laborum",
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Filtrar por next_run": {
+      "main": [
+        [
+          {
+            "node": "Normalizar payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar payload": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Normalizar Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Laborum (placeholder)2": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Respuesta Fuente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates2": {
+      "main": [
+        [
+          {
+            "node": "Filtrar por preferencias2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar por preferencias2": {
+      "main": [
+        [
+          {
+            "node": "HU7 - Registrar Consulta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HU3 - PrepararHistorial2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limpiar links2": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - link existe (válido)2": {
+      "main": [
+        [
+          {
+            "node": "limpiar links2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML2": {
+      "main": [
+        [
+          {
+            "node": "Send email4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email4": {
+      "main": [
+        [
+          {
+            "node": "Bump next_run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bump next_run": {
+      "main": [
+        [
+          {
+            "node": "Update next_run1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger2": {
+      "main": [
+        [
+          {
+            "node": "Obtener Preferencias1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - IF excede límite? (Code)": {
+      "main": [
+        [
+          {
+            "node": "HU13 - IF (exceeded?)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - IF (exceeded?)2": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Mensaje Límite Alcanzado2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Search (FirstJob)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Laborum (placeholder)2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - Normalizar Email1": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Get Límite (HU6)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - Get Consumo Actual1": {
+      "main": [
+        [
+          {
+            "node": "HU13 - IF excede límite? (Code)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - Get Límite (HU6)1": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Get Consumo Actual1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU13 - Mensaje Límite Alcanzado2": {
+      "main": [
+        [
+          {
+            "node": "limite2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Preferencias1": {
+      "main": [
+        [
+          {
+            "node": "Filtrar por next_run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU3 - PrepararHistorial2": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HU3 - Historial Ofertas": {
+      "main": [
+        [
+          {
+            "node": "Build HTML2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incrementar Consumo HU": {
+      "main": [
+        [
+          {
+            "node": "HU13 - Incrementar Consumo2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update next_run1": {
+      "main": [
+        [
+          {
+            "node": "Incrementar Consumo HU",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Respuesta Fuente3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Send email5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HU3 - Historial Ofertas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email5": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limite2": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP 2": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Respuesta Fuente4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript13": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [
+          {
+            "node": "Agregar Resultados2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar Resultados2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Google Search (FirstJob)1": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Respuesta Fuente1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Links FJ1": {
+      "main": [
+        [
+          {
+            "node": "HTTP FirstJob1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP FirstJob1": {
+      "main": [
+        [
+          {
+            "node": "HTML FirstJob1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML FirstJob1": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Respuesta Fuente2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse FirstJob1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "If - link existe (válido)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Respuesta Fuente": {
+      "main": [
+        [
+          {
+            "node": "parser laborum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Respuesta Fuente1": {
+      "main": [
+        [
+          {
+            "node": "Prep Links FJ1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Respuesta Fuente2": {
+      "main": [
+        [
+          {
+            "node": "Parse FirstJob1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Respuesta Fuente3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Respuesta Fuente4": {
+      "main": [
+        [
+          {
+            "node": "HTML2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parser laborum": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "13fdf5d8-dc6e-4e92-9c51-95fa570db2ad",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae9ab793f09030fcf5f823ea37df64baacdc27883c24dadb80017ad358f6f0ce"
+  },
+  "id": "qnQtvNxxCARssRUP",
+  "tags": []
+}

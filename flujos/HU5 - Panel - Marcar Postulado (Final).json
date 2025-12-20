@@ -1,0 +1,324 @@
+{
+  "name": "HU5 - Panel - Marcar Postulado (Final)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel/ofertas/postular",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -80
+      ],
+      "id": "8733459b-4447-463e-b004-016a1ceb9f39",
+      "name": "Webhook Postular",
+      "webhookId": "782f47f4-163c-4aec-8624-f18d436db1cd"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1496762465,
+          "mode": "list",
+          "cachedResultName": "HistorialOfertas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1496762465"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.body.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1472,
+        -80
+      ],
+      "id": "9d879ff4-38b4-4f48-b86d-12dd323604f5",
+      "name": "Traer filas del usuario",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const linksToUpdate = $node[\"Webhook Postular\"].json.body.links || [];\n\n// 1. GENERAR FECHA Y HORA ACTUAL\n// Creamos la fecha\nconst now = new Date();\n\n// Función auxiliar para agregar el \"0\" a la izquierda si es menor a 10 (ej: 05 minutos)\nconst pad = (num) => num.toString().padStart(2, '0');\n\n// Construimos el string: YYYY-MM-DD H:mm:ss\nconst fechaHora = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${now.getHours()}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;\n\n\n// 2. FILTRADO\n// Filtramos las filas que coinciden con los links seleccionados\nconst rowsToUpdate = $input.all()\n  .filter(item => item.json.link && linksToUpdate.includes(item.json.link));\n\n// Si no hay coincidencias, devolvemos vacío pero sin romper el flujo\nif (rowsToUpdate.length === 0) {\n  return [];\n}\n\n// 3. RETORNO CON LA NUEVA FECHA\nreturn rowsToUpdate.map(item => ({\n  json: {\n    // Usamos el row_number que viene de Sheets.\n    row_number: item.json.row_number,\n    estado_usuario: \"Postulado\",\n    \n    // 👇 AQUÍ ESTÁ LA FECHA GENERADA\n    fecha_cambio: fechaHora\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        -80
+      ],
+      "id": "1a6f10cd-9f3b-4650-a076-3cf1f47cff2d",
+      "name": "Calcular filas",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1496762465,
+          "mode": "list",
+          "cachedResultName": "HistorialOfertas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1496762465"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "estado_usuario": "={{ $json.estado_usuario }}",
+            "row_number": "={{ $json.row_number }}",
+            "actualizado": "={{ $json.fecha_cambio }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp_reporte",
+              "displayName": "timestamp_reporte",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fuente ",
+              "displayName": "fuente ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "titulo",
+              "displayName": "titulo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ubicacion",
+              "displayName": "ubicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "modalidad",
+              "displayName": "modalidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Clave_unica",
+              "displayName": "Clave_unica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado_usuario",
+              "displayName": "estado_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "actualizado",
+              "displayName": "actualizado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        -80
+      ],
+      "id": "345d53e4-a7c2-4c44-9ab8-2aa632d3c263",
+      "name": "Actualizar Estado",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n\"status\": \"ok\",\n\"msg\": \"Proceso finalizado (Verifica si se marcó el estado)\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        -80
+      ],
+      "id": "c5ebd26b-4991-4c31-ac84-af4fbddb1b52",
+      "name": "Responder OK"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Postular": {
+      "main": [
+        [
+          {
+            "node": "Traer filas del usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traer filas del usuario": {
+      "main": [
+        [
+          {
+            "node": "Calcular filas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular filas": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Estado": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9dea8d55-f327-4e73-9a74-e4a9974911f4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae9ab793f09030fcf5f823ea37df64baacdc27883c24dadb80017ad358f6f0ce"
+  },
+  "id": "LaCWVojGZmTVt9rV",
+  "tags": []
+}

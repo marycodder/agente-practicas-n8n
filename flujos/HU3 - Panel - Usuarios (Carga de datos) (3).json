@@ -1,0 +1,296 @@
+{
+  "name": "HU3 - Panel - Usuarios (Carga de datos)",
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        560
+      ],
+      "id": "e6528f2b-3997-4e50-8c4e-7149ce74860d",
+      "name": "Responder al Panel"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/panel/usuario",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        560
+      ],
+      "id": "5c2b78a8-f2a5-4938-9a39-0fe284b1b56e",
+      "name": "HU3 - Panel - usuarios1",
+      "webhookId": "a4c77f58-11cf-4e43-8a62-35d14918057d"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Tomamos el body del webhook\nconst body = $json.body || $json;\n\n// Email que llega desde el frontend\nconst emailCrudo = (body.email || body.Email || \"\").trim().toLowerCase();\n\n// Devolvemos UN SOLO item normalizado\nreturn {\n  emailNorm: emailCrudo,\n  email: body.email || body.Email || \"\",\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        560
+      ],
+      "id": "494adb02-9427-4324-8ae0-c1d134836f15",
+      "name": "Normalizar email1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c5276f56-124c-4d8d-8320-5b976b071313",
+              "leftValue": "={{ $items(\"Buscar usuario1\").length > 0 }}",
+              "rightValue": "={{ $items(\"Buscar usuario1\").length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        384,
+        560
+      ],
+      "id": "49e9d934-f5a9-4930-adc0-745860fa0254",
+      "name": "If - usuario existe1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.emailNorm }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        176,
+        560
+      ],
+      "id": "05fb7f45-4bae-4bfe-b24e-884921c3b663",
+      "name": "Buscar usuario1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1496762465,
+          "mode": "list",
+          "cachedResultName": "HistorialOfertas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=1496762465"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $node[\"Normalizar email1\"].json.emailNorm }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        624,
+        448
+      ],
+      "id": "0d8e3c1c-8da8-43b2-a387-04c7acaeb45e",
+      "name": "Leer historial ofertas1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tomamos el usuario\nconst usuarioItems = $items(\"Buscar usuario1\");\nconst usuario = usuarioItems.length > 0 ? usuarioItems[0].json : null;\n\n// Tomamos todas las ofertas\nconst ofertaItems = $items(\"Leer historial ofertas1\") || [];\n\n// --- DEDUPLICACIÓN ---\nconst uniqueOffersMap = new Map();\nfor (const item of ofertaItems) {\n  const clave = item.json.Clave_unica;\n  if (clave && !uniqueOffersMap.has(clave)) {\n    uniqueOffersMap.set(clave, item);\n  }\n}\nconst uniqueOfertaItems = Array.from(uniqueOffersMap.values());\n// ---------------------\n\nreturn [\n  {\n    json: {\n      status: \"ok\",\n      msg: \"Datos cargados correctamente\",\n      usuario: usuario\n        ? {\n            Nombre: usuario.Nombre || \"\",\n            Apellido: usuario.Apellido || \"\",\n            Email: usuario.Email || \"\",\n            Frecuencia: usuario.Frecuencia || \"\",\n            Modalidad: usuario.Modalidad || \"\",\n            Region: usuario.Región || usuario.Region || \"\",\n            \n            // 👇 ¡ESTA ES LA LÍNEA QUE FALTABA! 👇\n            // Sin esto, el botón siempre cree que es \"Activa\" (Amarillo)\n            Estado: usuario.Estado || usuario.estado || \"Activa\",\n          }\n        : null,\n      ofertas: uniqueOfertaItems.map((i) => ({\n        fecha: i.json.timestamp_reporte || i.json.fecha || \"\",\n        titulo: i.json.titulo || \"\",\n        empresa: i.json.empresa || \"\",\n        ubicacion: i.json.ubicacion || \"\",\n        modalidad: i.json.modalidad || \"No especificada\",\n        fuente: i.json['fuente '] || i.json.fuente || \"Web\",\n        link: i.json.link || \"\",\n        estado_usuario: i.json.estado_usuario || \"Pendiente\"\n      })),\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        448
+      ],
+      "id": "dad03770-0568-4732-b798-4c35d970860a",
+      "name": "Armar respuesta1"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"status\": \"ok\",\n  \"found\": false,\n  \"msg\": \"No encontramos ningún usuario registrado con ese correo.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        672
+      ],
+      "id": "07a8aeac-f65c-4a23-8ad9-db84bb396b7c",
+      "name": "Usuario no encontrado1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HU3 - Panel - usuarios1": {
+      "main": [
+        [
+          {
+            "node": "Normalizar email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar email1": {
+      "main": [
+        [
+          {
+            "node": "Buscar usuario1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - usuario existe1": {
+      "main": [
+        [
+          {
+            "node": "Leer historial ofertas1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Usuario no encontrado1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar usuario1": {
+      "main": [
+        [
+          {
+            "node": "If - usuario existe1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer historial ofertas1": {
+      "main": [
+        [
+          {
+            "node": "Armar respuesta1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar respuesta1": {
+      "main": [
+        [
+          {
+            "node": "Responder al Panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Usuario no encontrado1": {
+      "main": [
+        [
+          {
+            "node": "Responder al Panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "401fe9d2-f512-4bc4-8eb5-ee8eb5ea9abc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae9ab793f09030fcf5f823ea37df64baacdc27883c24dadb80017ad358f6f0ce"
+  },
+  "id": "nufdYnHs0Wdoe9sn",
+  "tags": []
+}

@@ -1,0 +1,313 @@
+{
+  "name": "Backend Admin Panel (API)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-api",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Webhook Admin",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        160
+      ],
+      "id": "8f454db9-704f-49c6-ac42-2c40cc29678c",
+      "webhookId": "e091dcd0-1925-4cf2-8ab3-54bb0603c4e8"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.action || $json.query.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "get_users"
+            },
+            {
+              "value2": "get_logs",
+              "output": 1
+            },
+            {
+              "value2": "update_status",
+              "output": 2
+            }
+          ]
+        }
+      },
+      "name": "Router de Acciones",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        160
+      ],
+      "id": "732348e5-35ae-40b2-995f-5ad1385da082"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "TU_ID_SPREADSHEET",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas (6)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Registro de Inscritos",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos"
+        },
+        "options": {}
+      },
+      "name": "Leer Usuarios",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c4f4f3eb-37b9-4aa4-8775-3076bc21db25",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "TU_ID_SPREADSHEET",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas (6)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BitacoraErrores",
+          "mode": "list",
+          "cachedResultName": "BitacoraErrores"
+        },
+        "options": {}
+      },
+      "name": "Leer Logs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        0,
+        192
+      ],
+      "id": "2b6f2968-8fe3-4ba6-8d3d-ea90ab70e75b",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "TU_ID_SPREADSHEET",
+          "mode": "list",
+          "cachedResultName": "BD_Practicas (6)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Registro de Inscritos",
+          "mode": "list",
+          "cachedResultName": "Registro de Inscritos"
+        },
+        "options": {}
+      },
+      "name": "Actualizar Estado",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        0,
+        368
+      ],
+      "id": "52d5b872-4700-4562-b68f-e2d3a5a30be2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aB54XzO7nk5Ur6oj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Responder Users",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        272,
+        0
+      ],
+      "id": "09243c55-8c0d-49c5-a295-2e61050e7f06"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Responder Logs",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        272,
+        192
+      ],
+      "id": "e2a79b9f-36a0-42d2-b291-1a3aa6fd6609"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"success\",\n  \"message\": \"Usuario actualizado correctamente\"\n}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Confirmar Update",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        272,
+        368
+      ],
+      "id": "fc8d7fdf-1d4c-48f6-8baa-28acdb8d95fb"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Admin": {
+      "main": [
+        [
+          {
+            "node": "Router de Acciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router de Acciones": {
+      "main": [
+        [
+          {
+            "node": "Leer Usuarios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Leer Logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Actualizar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Usuarios": {
+      "main": [
+        [
+          {
+            "node": "Responder Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Logs": {
+      "main": [
+        [
+          {
+            "node": "Responder Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Estado": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1e75be54-6e78-4426-a333-58a57ac38c78",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae9ab793f09030fcf5f823ea37df64baacdc27883c24dadb80017ad358f6f0ce"
+  },
+  "id": "X0lmiL9mh4tyGqPe",
+  "tags": []
+}
