@@ -121,16 +121,13 @@ function renderHistorial(ofertas) {
       <td style="text-align: center"><input type="checkbox" class="offer-check" data-index="${index}"></td>
       <td>${oferta.fecha || "-"}</td>
       <td><span class="badge badge-info">${oferta.fuente || "Web"}</span></td>
-      <td><strong>${
-        oferta.empresa || "Empresa Confidencial"
-      }</strong><br><span style="font-size: 0.85rem; color: #666;">${
-      oferta.titulo || "Puesto no especificado"
-    }</span></td>
+      <td><strong>${oferta.empresa || "Empresa Confidencial"
+      }</strong><br><span style="font-size: 0.85rem; color: #666;">${oferta.titulo || "Puesto no especificado"
+      }</span></td>
       <td>${oferta.ubicacion || "Chile"}</td>
       <td>${oferta.modalidad || "-"}</td>
-      <td><span class="badge ${badgeClass}">${
-      oferta.estado_usuario || "Pendiente"
-    }</span></td>
+      <td><span class="badge ${badgeClass}">${oferta.estado_usuario || "Pendiente"
+      }</span></td>
       <td style="text-align: right;">${accionHtml}</td>
     `;
     tbody.appendChild(row);
@@ -142,6 +139,8 @@ function setupListeners(email) {
     e.preventDefault();
     alert("Función de guardar pendiente de implementar webhook update_prefs.");
   });
+
+
 
   const checkAll = document.getElementById("checkAll");
   checkAll.addEventListener("change", (e) => {
@@ -166,13 +165,27 @@ function updateActionButtons() {
 function showToast(msg, type) {
   const container = document.getElementById("toast-container");
   const div = document.createElement("div");
-  div.style.background =
-    type === "error" ? "#ef4444" : type === "info" ? "#3b82f6" : "#10b981";
-  div.style.color = "white";
-  div.style.padding = "10px 20px";
-  div.style.marginBottom = "10px";
-  div.style.borderRadius = "5px";
-  div.innerText = msg;
+  div.className = "toast";
+
+  // Icono según tipo
+  let icon = "ph-info";
+  let colorVar = "--primary";
+
+  if (type === "error") { icon = "ph-warning-circle"; colorVar = "--danger"; }
+  else if (type === "success") { icon = "ph-check-circle"; colorVar = "--success"; }
+
+  div.style.borderLeftColor = `var(${colorVar})`;
+
+  div.innerHTML = `
+    <i class="ph-fill ${icon}" style="color: var(${colorVar}); font-size: 1.2rem;"></i>
+    <span>${msg}</span>
+  `;
+
   container.appendChild(div);
-  setTimeout(() => div.remove(), 3000);
+  setTimeout(() => {
+    div.style.opacity = "0";
+    div.style.transform = "translateX(100%)";
+    setTimeout(() => div.remove(), 300); // Esperar animación
+  }, 3000);
 }
+

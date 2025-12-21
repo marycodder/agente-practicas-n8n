@@ -1,6 +1,8 @@
 // ===============================
-// 1. Referencias al DOM
+// IMPORTANTE: Asegúrate de que theme.js esté cargado antes en el HTML
 // ===============================
+// URL APUNTANDO AL SERVIDOR DE LA U
+
 const form = document.getElementById("registroForm");
 const mensaje = document.getElementById("mensaje");
 const submitBtn = document.getElementById("submitBtn");
@@ -71,3 +73,14 @@ form.addEventListener("submit", async (e) => {
     submitBtn.disabled = false;
   }
 });
+
+// Scroll suave al formulario desde el hero
+const scrollBtn = document.getElementById("scrollToFormBtn");
+if (scrollBtn) {
+  scrollBtn.addEventListener("click", () => {
+    document.getElementById("formSection").scrollIntoView({
+      behavior: "smooth"
+    });
+  });
+}
+

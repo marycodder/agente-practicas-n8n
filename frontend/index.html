@@ -1,71 +1,80 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Registro de Prácticas</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="styles.css" />
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  </head>
-  <body>
-    <main class="container container--centered">
-      <div class="register-header">
-        <h1>📋 Registro de Prácticas en Informática</h1>
-        <p class="subtitle">
-          ¡Inscríbete para recibir reportes periódicos con oportunidades de
-          práctica del área informática, filtradas según tus intereses!
-        </p>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Registro de Prácticas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css?v=2.0" />
+  <link rel="stylesheet" href="hero-styles.css?v=2.0" />
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="theme.js?v=2.0"></script>
+</head>
+
+<body>
+  <!-- Hero Landing Page -->
+  <section id="heroSection" class="hero-section">
+    <button id="themeToggleBtn" class="btn btn-icon" type="button" aria-label="Cambiar tema"
+      style="position: absolute; top: 1.5rem; right: 1.5rem; z-index: 10;">
+      <i class="ph-fill ph-sun"></i>
+    </button>
+
+    <div class="hero-content">
+      <button id="scrollToFormBtn" class="hero-cta-btn">
+        ¡Regístrate!
+      </button>
+    </div>
+  </section>
+
+  <!-- Formulario de Registro -->
+  <main id="formSection" class="container container--centered"
+    style="min-height: 100vh; padding-top: 3rem; padding-bottom: 3rem;">
+    <div class="register-header" style="text-align: center; margin-bottom: 2.5rem;">
+      <div class="register-icon"
+        style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);">
+        <i class="ph-fill ph-robot" style="font-size: 2.5rem; color: white;"></i>
       </div>
+      <h1 style="font-size: 2rem; margin-bottom: 0.75rem;">🎯 Búsqueda Inteligente de Prácticas</h1>
+      <p class="subtitle" style="max-width: 520px; margin: 0 auto; font-size: 1.05rem; line-height: 1.7;">
+        <strong>¡Agente automatizado</strong> que rastrea y filtra oportunidades de práctica profesional en informática.
+        Recibe reportes personalizados directamente en tu correo!
+      </p>
+    </div>
 
-      <form id="registroForm" class="card card--form">
-        <div class="form-section">
-          <h3 class="form-section-title">
-            <i class="ph ph-user-circle"></i> Información Personal
-          </h3>
+    <form id="registroForm" class="card card--glass" style="max-width: 650px;">
+      <div class="form-section">
+        <h3>
+          <i class="ph ph-user-circle"></i> Información Personal
+        </h3>
 
+        <div class="form-grid">
           <div class="field-group">
             <label for="nombre"> <i class="ph ph-user"></i> Nombre </label>
-            <input
-              id="nombre"
-              name="nombre"
-              type="text"
-              placeholder="Ingresa tu nombre"
-              required
-            />
+            <input id="nombre" name="nombre" type="text" placeholder="Ingresa tu nombre" required />
           </div>
 
           <div class="field-group">
             <label for="apellido">
               <i class="ph ph-identification-card"></i> Apellido
             </label>
-            <input
-              id="apellido"
-              name="apellido"
-              type="text"
-              placeholder="Ingresa tu apellido"
-              required
-            />
-          </div>
-
-          <div class="field-group">
-            <label for="email"> <i class="ph ph-envelope"></i> Email </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="tucorreo@ejemplo.com"
-              required
-            />
+            <input id="apellido" name="apellido" type="text" placeholder="Ingresa tu apellido" required />
           </div>
         </div>
 
-        <div class="form-divider"></div>
+        <div class="field-group">
+          <label for="email"> <i class="ph ph-envelope"></i> Email </label>
+          <input id="email" name="email" type="email" placeholder="tucorreo@ejemplo.com" required />
+        </div>
+      </div>
 
-        <div class="form-section">
-          <h3 class="form-section-title">
-            <i class="ph ph-sliders-horizontal"></i> Preferencias de Búsqueda
-          </h3>
+      <div style="border-top: 1px solid var(--border); margin: 1.5rem 0;"></div>
 
+      <div class="form-section">
+        <h3>
+          <i class="ph ph-sliders-horizontal"></i> Preferencias de Búsqueda
+        </h3>
+
+        <div class="form-grid">
           <div class="field-group">
             <label for="frecuencia">
               <i class="ph ph-clock"></i> Frecuencia de reportes
@@ -90,68 +99,68 @@
               <option value="Híbrido">🔄 Híbrido</option>
             </select>
           </div>
-
-          <div class="field-group">
-            <label for="region">
-              <i class="ph ph-map-pin"></i> Región de búsqueda
-            </label>
-            <select id="region" name="region" required>
-              <option value="">Selecciona una opción…</option>
-              <option value="Región de Arica y Parinacota">
-                Región de Arica y Parinacota (XV)
-              </option>
-              <option value="Región de Tarapacá">Región de Tarapacá (I)</option>
-              <option value="Región de Antofagasta">
-                Región de Antofagasta (II)
-              </option>
-              <option value="Región de Atacama">Región de Atacama (III)</option>
-              <option value="Región de Coquimbo">
-                Región de Coquimbo (IV)
-              </option>
-              <option value="Región de Valparaíso">
-                Región de Valparaíso (V)
-              </option>
-              <option value="Región Metropolitana de Santiago">
-                Región Metropolitana de Santiago (RM)
-              </option>
-              <option value="Región del Libertador General Bernardo O'Higgins">
-                Región del Libertador General Bernardo O'Higgins (VI)
-              </option>
-              <option value="Región del Maule">Región del Maule (VII)</option>
-              <option value="Región de Ñuble">Región de Ñuble (XVI)</option>
-              <option value="Región del Biobío">
-                Región del Biobío (VIII)
-              </option>
-              <option value="Región de La Araucanía">
-                Región de La Araucanía (IX)
-              </option>
-              <option value="Región de Los Ríos">
-                Región de Los Ríos (XIV)
-              </option>
-              <option value="Región de Los Lagos">
-                Región de Los Lagos (X)
-              </option>
-              <option
-                value="Región de Aysén del General Carlos Ibáñez del Campo"
-              >
-                Región de Aysén del General Carlos Ibáñez del Campo (XI)
-              </option>
-              <option value="Región de Magallanes y de la Antártica Chilena">
-                Región de Magallanes y de la Antártica Chilena (XII)
-              </option>
-            </select>
-          </div>
         </div>
 
-        <button type="submit" id="submitBtn" class="btn-submit">
-          <i class="ph ph-paper-plane-right"></i>
-          Completar Registro
-        </button>
+        <div class="field-group">
+          <label for="region">
+            <i class="ph ph-map-pin"></i> Región de búsqueda
+          </label>
+          <select id="region" name="region" required>
+            <option value="">Selecciona una opción…</option>
+            <option value="Región de Arica y Parinacota (XV)">
+              Región de Arica y Parinacota (XV)
+            </option>
+            <option value="Región de Tarapacá (I)">Región de Tarapacá (I)</option>
+            <option value="Región de Antofagasta (II)">
+              Región de Antofagasta (II)
+            </option>
+            <option value="Región de Atacama (III)">Región de Atacama (III)</option>
+            <option value="Región de Coquimbo (IV)">
+              Región de Coquimbo (IV)
+            </option>
+            <option value="Región de Valparaíso (V)">
+              Región de Valparaíso (V)
+            </option>
+            <option value="Región Metropolitana de Santiago (RM)">
+              Región Metropolitana de Santiago (RM)
+            </option>
+            <option value="Región del Libertador General Bernardo O'Higgins (VI)">
+              Región del Libertador General Bernardo O'Higgins (VI)
+            </option>
+            <option value="Región del Maule (VII)">Región del Maule (VII)</option>
+            <option value="Región de Ñuble (XVI)">Región de Ñuble (XVI)</option>
+            <option value="Región del Biobío (VIII)">
+              Región del Biobío (VIII)
+            </option>
+            <option value="Región de La Araucanía (IX)">
+              Región de La Araucanía (IX)
+            </option>
+            <option value="Región de Los Ríos (XIV)">
+              Región de Los Ríos (XIV)
+            </option>
+            <option value="Región de Los Lagos (X)">
+              Región de Los Lagos (X)
+            </option>
+            <option value="Región de Aysén del General Carlos Ibáñez del Campo (XI)">
+              Región de Aysén del General Carlos Ibáñez del Campo (XI)
+            </option>
+            <option value="Región de Magallanes y de la Antártica Chilena (XII)">
+              Región de Magallanes y de la Antártica Chilena (XII)
+            </option>
+          </select>
+        </div>
+      </div>
 
-        <p id="mensaje" class="message" hidden></p>
-      </form>
-    </main>
+      <button type="submit" id="submitBtn" class="btn-submit" style="margin-top: 0.5rem;">
+        <i class="ph ph-paper-plane-right"></i>
+        Completar Registro
+      </button>
 
-    <script src="app.js"></script>
-  </body>
+      <p id="mensaje" class="message" hidden></p>
+    </form>
+  </main>
+
+  <script src="app.js?v=2.0"></script>
+</body>
+
 </html>

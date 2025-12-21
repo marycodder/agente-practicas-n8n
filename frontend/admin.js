@@ -39,6 +39,8 @@ document.getElementById("btnLogout").addEventListener("click", () => {
   window.location.reload();
 });
 
+
+
 const btnTabUsers = document.getElementById("btnTabUsers");
 const btnTabErrors = document.getElementById("btnTabErrors");
 const tabUsers = document.getElementById("tabUsers");
@@ -120,16 +122,13 @@ function renderUsers(users) {
       <td>${u.Nombre || ""} ${u.Apellido || ""}</td>
       <td>${u["Región"] || u.Region || "-"}</td>
       <td>${u.Frecuencia || "-"}</td>
-      <td><span class="badge ${
-        isActive ? "badge-success" : "badge-warning"
+      <td><span class="badge ${isActive ? "badge-success" : "badge-warning"
       }">${estadoRaw}</span></td>
       <td style="text-align: right;">
-        <button class="btn-action ${
-          isActive ? "btn-danger" : "btn-success"
-        }" onclick="window.cambiarEstado('${u.Email}', '${nextState}', this)">
-          <i class="ph ${isActive ? "ph-pause" : "ph-play"}"></i> ${
-      isActive ? "Pausar" : "Activar"
-    }
+        <button class="btn-action ${isActive ? "btn-danger" : "btn-success"
+      }" onclick="window.cambiarEstado('${u.Email}', '${nextState}', this)">
+          <i class="ph ${isActive ? "ph-pause" : "ph-play"}"></i> ${isActive ? "Pausar" : "Activar"
+      }
         </button>
       </td>
     `;
@@ -193,13 +192,26 @@ window.cambiarEstado = async (email, nuevoEstado, btnElement) => {
 function showToast(msg, type) {
   const container = document.getElementById("toast-container");
   const div = document.createElement("div");
-  div.style.background = type === "error" ? "#ef4444" : "#10b981";
-  if (type === "info") div.style.background = "#3b82f6";
-  div.style.color = "white";
-  div.style.padding = "10px 20px";
-  div.style.marginBottom = "10px";
-  div.style.borderRadius = "5px";
-  div.innerText = msg;
+  div.className = "toast";
+
+  let icon = "ph-info";
+  let colorVar = "--primary";
+
+  if (type === "error") { icon = "ph-warning-circle"; colorVar = "--danger"; }
+  else if (type === "success") { icon = "ph-check-circle"; colorVar = "--success"; }
+
+  div.style.borderLeftColor = `var(${colorVar})`;
+
+  div.innerHTML = `
+    <i class="ph-fill ${icon}" style="color: var(${colorVar}); font-size: 1.2rem;"></i>
+    <span>${msg}</span>
+  `;
+
   container.appendChild(div);
-  setTimeout(() => div.remove(), 3000);
+  setTimeout(() => {
+    div.style.opacity = "0";
+    div.style.transform = "translateX(100%)";
+    setTimeout(() => div.remove(), 300);
+  }, 3000);
 }
+

@@ -1,155 +1,146 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Panel de Prácticas</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <link rel="stylesheet" href="styles.css" />
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel de Prácticas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  </head>
-  <body>
-    <div id="toast-container"></div>
+  <link rel="stylesheet" href="styles.css?v=2.0" />
 
-    <main class="container container--wide">
-      <header class="panel-header card">
-        <div>
-          <h1 id="panelTitulo">Panel de Prácticas</h1>
-          <p id="panelSubtitulo" class="subtitle">
-            <i class="ph ph-spinner-gap"></i> Cargando información...
-          </p>
-        </div>
-        <div class="panel-user-email">
+  <script src="theme.js?v=2.0"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+  <div id="toast-container"></div>
+
+  <main class="container container--wide">
+    <header class="card header-flex" style="margin-top: 1rem;">
+      <div>
+        <h1 id="panelTitulo">Panel de Prácticas</h1>
+        <p id="panelSubtitulo" class="subtitle" style="margin-bottom: 0;">
+          <i class="ph ph-spinner-gap"></i> Cargando información...
+        </p>
+      </div>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <div class="panel-user-pill">
           <i class="ph-fill ph-user-circle"></i>
           <span id="panelEmail">...</span>
         </div>
-      </header>
+        <button id="themeToggleBtn" class="btn btn-icon" type="button" aria-label="Cambiar tema">
+          <i class="ph-fill ph-sun"></i>
+        </button>
+      </div>
+    </header>
 
-      <section class="panel-grid">
-        <section class="card panel-section">
-          <h2 class="panel-section__title">
-            <i class="ph ph-sliders-horizontal"></i> Preferencias
-          </h2>
-          <p class="panel-section__subtitle">
-            Personaliza tus reportes automáticos.
-          </p>
+    <section class="panel-grid">
+      <section class="card panel-section">
+        <h2 class="panel-section__title">
+          <i class="ph ph-sliders-horizontal"></i> Preferencias
+        </h2>
+        <p class="panel-section__subtitle">
+          Personaliza tus reportes automáticos.
+        </p>
 
-          <form id="prefsForm" class="panel-form">
-            <div class="field-group">
-              <label for="frecuencia"
-                ><i class="ph ph-clock"></i> Frecuencia</label
-              >
-              <select id="frecuencia" name="frecuencia" required>
-                <option value="">Selecciona...</option>
-                <option value="4 Días">Cada 4 Días</option>
-                <option value="15 Días">Cada 15 Días</option>
-                <option value="Cada semana">Semanalmente</option>
-                <option value="Cada mes">Mensualmente</option>
-              </select>
-            </div>
+        <form id="prefsForm" class="panel-form">
+          <div class="field-group">
+            <label for="frecuencia"><i class="ph ph-clock"></i> Frecuencia</label>
+            <select id="frecuencia" name="frecuencia" required>
+              <option value="">Selecciona...</option>
+              <option value="4 Días">Cada 4 Días</option>
+              <option value="15 Días">Cada 15 Días</option>
+              <option value="Cada semana">Semanalmente</option>
+              <option value="Cada mes">Mensualmente</option>
+            </select>
+          </div>
 
-            <div class="field-group">
-              <label for="modalidad"
-                ><i class="ph ph-laptop"></i> Modalidad</label
-              >
-              <select id="modalidad" name="modalidad" required>
-                <option value="">Selecciona...</option>
-                <option value="Remota">🏡 Remota</option>
-                <option value="Presencial">🏢 Presencial</option>
-                <option value="Híbrido">🔄 Híbrido</option>
-              </select>
-            </div>
+          <div class="field-group">
+            <label for="modalidad"><i class="ph ph-laptop"></i> Modalidad</label>
+            <select id="modalidad" name="modalidad" required>
+              <option value="">Selecciona...</option>
+              <option value="Remota">🏡 Remota</option>
+              <option value="Presencial">🏢 Presencial</option>
+              <option value="Híbrido">🔄 Híbrido</option>
+            </select>
+          </div>
 
-            <div class="field-group">
-              <label for="region"><i class="ph ph-map-pin"></i> Región</label>
-              <select id="region" name="region" required>
-                <option value="">Selecciona una opción...</option>
-                <option value="Región de Arica y Parinacota (XV)">
-                  Región de Arica y Parinacota (XV)
-                </option>
-                <option value="Región de Tarapacá (I)">
-                  Región de Tarapacá (I)
-                </option>
-                <option value="Región de Antofagasta (II)">
-                  Región de Antofagasta (II)
-                </option>
-                <option value="Región de Atacama (III)">
-                  Región de Atacama (III)
-                </option>
-                <option value="Región de Coquimbo (IV)">
-                  Región de Coquimbo (IV)
-                </option>
-                <option value="Región de Valparaíso (V)">
-                  Región de Valparaíso (V)
-                </option>
-                <option value="Región Metropolitana de Santiago (RM)">
-                  Región Metropolitana de Santiago (RM)
-                </option>
-                <option
-                  value="Región del Libertador General Bernardo O'Higgins (VI)"
-                >
-                  Región del Libertador General Bernardo O'Higgins (VI)
-                </option>
-                <option value="Región del Maule (VII)">
-                  Región del Maule (VII)
-                </option>
-                <option value="Región de Ñuble (XVI)">
-                  Región de Ñuble (XVI)
-                </option>
-                <option value="Región del Biobío (VIII)">
-                  Región del Biobío (VIII)
-                </option>
-                <option value="Región de La Araucanía (IX)">
-                  Región de La Araucanía (IX)
-                </option>
-                <option value="Región de Los Ríos (XIV)">
-                  Región de Los Ríos (XIV)
-                </option>
-                <option value="Región de Los Lagos (X)">
-                  Región de Los Lagos (X)
-                </option>
-                <option
-                  value="Región de Aysén del General Carlos Ibáñez del Campo (XI)"
-                >
-                  Región de Aysén del General Carlos Ibáñez del Campo (XI)
-                </option>
-                <option
-                  value="Región de Magallanes y de la Antártica Chilena (XII)"
-                >
-                  Región de Magallanes y de la Antártica Chilena (XII)
-                </option>
-              </select>
-            </div>
+          <div class="field-group">
+            <label for="region"><i class="ph ph-map-pin"></i> Región</label>
+            <select id="region" name="region" required>
+              <option value="">Selecciona una opción...</option>
+              <option value="Región de Arica y Parinacota (XV)">
+                Región de Arica y Parinacota (XV)
+              </option>
+              <option value="Región de Tarapacá (I)">
+                Región de Tarapacá (I)
+              </option>
+              <option value="Región de Antofagasta (II)">
+                Región de Antofagasta (II)
+              </option>
+              <option value="Región de Atacama (III)">
+                Región de Atacama (III)
+              </option>
+              <option value="Región de Coquimbo (IV)">
+                Región de Coquimbo (IV)
+              </option>
+              <option value="Región de Valparaíso (V)">
+                Región de Valparaíso (V)
+              </option>
+              <option value="Región Metropolitana de Santiago (RM)">
+                Región Metropolitana de Santiago (RM)
+              </option>
+              <option value="Región del Libertador General Bernardo O'Higgins (VI)">
+                Región del Libertador General Bernardo O'Higgins (VI)
+              </option>
+              <option value="Región del Maule (VII)">
+                Región del Maule (VII)
+              </option>
+              <option value="Región de Ñuble (XVI)">
+                Región de Ñuble (XVI)
+              </option>
+              <option value="Región del Biobío (VIII)">
+                Región del Biobío (VIII)
+              </option>
+              <option value="Región de La Araucanía (IX)">
+                Región de La Araucanía (IX)
+              </option>
+              <option value="Región de Los Ríos (XIV)">
+                Región de Los Ríos (XIV)
+              </option>
+              <option value="Región de Los Lagos (X)">
+                Región de Los Lagos (X)
+              </option>
+              <option value="Región de Aysén del General Carlos Ibáñez del Campo (XI)">
+                Región de Aysén del General Carlos Ibáñez del Campo (XI)
+              </option>
+              <option value="Región de Magallanes y de la Antártica Chilena (XII)">
+                Región de Magallanes y de la Antártica Chilena (XII)
+              </option>
+            </select>
+          </div>
 
-            <button type="submit" id="savePrefsBtn">
-              <i class="ph ph-floppy-disk"></i> Guardar cambios
-            </button>
-          </form>
+          <button type="submit" id="savePrefsBtn">
+            <i class="ph ph-floppy-disk"></i> Guardar cambios
+          </button>
+        </form>
 
-          <div
-            style="
+        <div style="
               border-top: 1px solid var(--border);
               margin-top: 2rem;
               padding-top: 1.5rem;
-            "
-          >
-            <h3 style="font-size: 1rem; color: #cbd5e1; margin-bottom: 0.5rem">
-              <i class="ph ph-lightning"></i> Reporte Inmediato
-            </h3>
-            <p
-              style="
+            ">
+          <h3 style="font-size: 1rem; color: #cbd5e1; margin-bottom: 0.5rem">
+            <i class="ph ph-lightning"></i> Reporte Inmediato
+          </h3>
+          <p style="
                 font-size: 0.85rem;
                 color: var(--text-muted);
                 margin-bottom: 1rem;
-              "
-            >
-              ¿No quieres esperar? Solicita una búsqueda ahora mismo.
-            </p>
-            <button
-              id="btnReporteInmediato"
-              type="button"
-              style="
+              ">
+            ¿No quieres esperar? Solicita una búsqueda ahora mismo.
+          </p>
+          <button id="btnReporteInmediato" type="button" style="
                 background-color: #6366f1;
                 color: white;
                 border: none;
@@ -163,158 +154,127 @@
                 justify-content: center;
                 gap: 8px;
                 transition: background 0.2s;
-              "
-              onmouseover="this.style.backgroundColor='#4f46e5'"
-              onmouseout="this.style.backgroundColor='#6366f1'"
-            >
-              <i class="ph-bold ph-paper-plane-right"></i> Solicitar Ahora
-            </button>
-          </div>
+              " onmouseover="this.style.backgroundColor='#4f46e5'" onmouseout="this.style.backgroundColor='#6366f1'">
+            <i class="ph-bold ph-paper-plane-right"></i> Solicitar Ahora
+          </button>
+        </div>
 
-          <div
-            style="
+        <div style="
               border-top: 1px solid var(--border);
               margin-top: 2rem;
               padding-top: 1.5rem;
-            "
-          >
-            <h3 style="font-size: 1rem; color: #cbd5e1; margin-bottom: 0.5rem">
-              Estado del Servicio
-            </h3>
-            <p
-              style="
+            ">
+          <h3 style="font-size: 1rem; color: #cbd5e1; margin-bottom: 0.5rem">
+            Estado del Servicio
+          </h3>
+          <p style="
                 font-size: 0.85rem;
                 color: var(--text-muted);
                 margin-bottom: 1rem;
-              "
-            >
-              Controla si deseas recibir correos o pausar temporalmente.
+              ">
+            Controla si deseas recibir correos o pausar temporalmente.
+          </p>
+          <button id="btnPausar" type="button" class="btn-warning">
+            <i class="ph-bold ph-pause-circle"></i> Cargando estado...
+          </button>
+        </div>
+      </section>
+
+      <section class="card panel-section">
+        <div class="actions-header">
+          <div>
+            <h2 class="panel-section__title">
+              <i class="ph ph-briefcase"></i> Ofertas Recibidas
+            </h2>
+            <p class="panel-section__subtitle" style="margin-bottom: 0">
+              Gestiona tus postulaciones.
             </p>
-            <button id="btnPausar" type="button" class="btn-warning">
-              <i class="ph-bold ph-pause-circle"></i> Cargando estado...
+          </div>
+
+          <div class="actions-group">
+            <button id="btnPostular" type="button" class="btn-success" disabled>
+              <i class="ph-bold ph-check"></i> Marcar Postulado
+            </button>
+
+            <button id="btnDescartar" type="button" class="btn-delete" disabled>
+              <i class="ph-bold ph-trash"></i> Descartar (<span id="countSeleccion">0</span>)
             </button>
           </div>
-        </section>
+        </div>
 
-        <section class="card panel-section">
-          <div class="actions-header">
-            <div>
-              <h2 class="panel-section__title">
-                <i class="ph ph-briefcase"></i> Ofertas Recibidas
-              </h2>
-              <p class="panel-section__subtitle" style="margin-bottom: 0">
-                Gestiona tus postulaciones.
-              </p>
-            </div>
-
-            <div class="actions-group">
-              <button
-                id="btnPostular"
-                type="button"
-                class="btn-success"
-                disabled
-              >
-                <i class="ph-bold ph-check"></i> Marcar Postulado
-              </button>
-
-              <button
-                id="btnDescartar"
-                type="button"
-                class="btn-delete"
-                disabled
-              >
-                <i class="ph-bold ph-trash"></i> Descartar (<span
-                  id="countSeleccion"
-                  >0</span
-                >)
-              </button>
-            </div>
+        <div class="filters-bar">
+          <div class="search-container">
+            <i class="ph ph-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Buscar empresa o título..." />
+            <button id="btnClearSearch" class="search-clear" title="Borrar búsqueda">
+              <i class="ph-fill ph-x-circle"></i>
+            </button>
           </div>
 
-          <div class="filters-bar">
-            <div class="search-container">
-              <i class="ph ph-magnifying-glass search-icon"></i>
-              <input
-                type="text"
-                id="searchInput"
-                placeholder="Buscar empresa o título..."
-              />
-              <button
-                id="btnClearSearch"
-                class="search-clear"
-                title="Borrar búsqueda"
-              >
-                <i class="ph-fill ph-x-circle"></i>
-              </button>
-            </div>
+          <div class="filters-row">
+            <select id="filterFuente" class="filter-select">
+              <option value="">Todas las fuentes</option>
+              <option value="Laborum">Laborum</option>
+              <option value="Linkedin">Linkedin</option>
+              <option value="Trabajando">Trabajando</option>
+              <option value="FirstJob">FirstJob</option>
+              <option value="Computrabajo">Computrabajo</option>
+            </select>
 
-            <div class="filters-row">
-              <select id="filterFuente" class="filter-select">
-                <option value="">Todas las fuentes</option>
-                <option value="Laborum">Laborum</option>
-                <option value="Linkedin">Linkedin</option>
-                <option value="Trabajando">Trabajando</option>
-                <option value="FirstJob">FirstJob</option>
-                <option value="Computrabajo">Computrabajo</option>
-              </select>
+            <select id="filterModalidad" class="filter-select">
+              <option value="">Todas las modalidades</option>
+              <option value="presencial">Presencial</option>
+              <option value="remoto">Remoto</option>
+              <option value="hibrido">Híbrido</option>
+            </select>
 
-              <select id="filterModalidad" class="filter-select">
-                <option value="">Todas las modalidades</option>
-                <option value="presencial">Presencial</option>
-                <option value="remoto">Remoto</option>
-                <option value="hibrido">Híbrido</option>
-              </select>
+            <select id="filterEstado" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="postulado">Postulado</option>
+              <option value="descartado">Descartado</option>
+            </select>
 
-              <select id="filterEstado" class="filter-select">
-                <option value="">Todos los estados</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="postulado">Postulado</option>
-                <option value="descartado">Descartado</option>
-              </select>
+            <select id="sortOrder" class="filter-select">
+              <option value="desc">Más recientes primero</option>
+              <option value="asc">Más antiguas primero</option>
+            </select>
 
-              <select id="sortOrder" class="filter-select">
-                <option value="desc">Más recientes primero</option>
-                <option value="asc">Más antiguas primero</option>
-              </select>
-
-              <button
-                id="btnResetFilters"
-                class="btn-filter-reset"
-                title="Limpiar filtros"
-              >
-                <i class="ph ph-x"></i> Limpiar
-              </button>
-            </div>
+            <button id="btnResetFilters" class="btn-filter-reset" title="Limpiar filtros">
+              <i class="ph ph-x"></i> Limpiar
+            </button>
           </div>
+        </div>
 
-          <div id="historialWrapper" class="table-responsive">
-            <table class="history-table">
-              <thead>
-                <tr>
-                  <th style="width: 40px; text-align: center">
-                    <input type="checkbox" id="checkAll" />
-                  </th>
-                  <th style="width: 100px">Fecha</th>
-                  <th style="width: 90px">Fuente</th>
-                  <th style="min-width: 200px">Empresa / Puesto</th>
-                  <th>Ubicación</th>
-                  <th>Modalidad</th>
-                  <th style="width: 110px">Estado</th>
-                  <th style="width: 100px; text-align: right">Acción</th>
-                </tr>
-              </thead>
-              <tbody id="historialBody"></tbody>
-            </table>
+        <div id="historialWrapper" class="table-responsive">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center">
+                  <input type="checkbox" id="checkAll" />
+                </th>
+                <th style="width: 100px">Fecha</th>
+                <th style="width: 90px">Fuente</th>
+                <th style="min-width: 200px">Empresa / Puesto</th>
+                <th>Ubicación</th>
+                <th>Modalidad</th>
+                <th style="width: 110px">Estado</th>
+                <th style="width: 100px; text-align: right">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="historialBody"></tbody>
+          </table>
 
-            <div id="historialEmpty" class="table-empty" hidden>
-              <i class="ph ph-tray"></i>
-              <p>No se encontraron ofertas con estos filtros. 🔍</p>
-            </div>
+          <div id="historialEmpty" class="table-empty" hidden>
+            <i class="ph ph-tray"></i>
+            <p>No se encontraron ofertas con estos filtros. 🔍</p>
           </div>
-        </section>
+        </div>
       </section>
-    </main>
+    </section>
+  </main>
 
-    <script src="panel.js"></script>
-  </body>
+  <script src="panel.js?v=2.0"></script>
+</body>
+
 </html>
