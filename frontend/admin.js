@@ -2,18 +2,21 @@
  * ADMIN (admin.js) - SERVIDOR 10.40.5.21
  **********************************************************/
 
-// ✅ URL APUNTANDO AL SERVIDOR DE LA U
+// ✅ URL DEL BACKEND (Producción)
 const BASE_URL = "http://10.40.5.21:5678/webhook/admin-api";
 
+// Variables de UI
 const loginOverlay = document.getElementById("loginOverlay");
 const adminContent = document.getElementById("adminContent");
 const loginForm = document.getElementById("loginForm");
 const CREDENTIALS = { user: "admin", pass: "admin123" };
 
+// Verificar Sesión al cargar
 if (sessionStorage.getItem("adminAuth") === "true") {
   showAdminPanel();
 }
 
+// Lógica de Login
 if (loginForm) {
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -39,8 +42,7 @@ document.getElementById("btnLogout").addEventListener("click", () => {
   window.location.reload();
 });
 
-
-
+// Pestañas
 const btnTabUsers = document.getElementById("btnTabUsers");
 const btnTabErrors = document.getElementById("btnTabErrors");
 const tabUsers = document.getElementById("tabUsers");
@@ -63,10 +65,14 @@ function switchTab(tab) {
   }
 }
 
+// ---------------------------------------------------------
+// FUNCIONES DE DATOS
+// ---------------------------------------------------------
+
 async function cargarDatosAdmin() {
   showToast("Conectando con n8n...", "info");
 
-  // Usuarios
+  // 1. Obtener Usuarios
   try {
     const res = await fetch(BASE_URL, {
       method: "POST",
@@ -75,6 +81,7 @@ async function cargarDatosAdmin() {
     });
     const rawData = await res.json();
     let users = [];
+    // N8n puede devolver array directo o un objeto envuelto
     if (Array.isArray(rawData)) users = rawData;
     else if (rawData.data) users = rawData.data;
 
@@ -84,7 +91,7 @@ async function cargarDatosAdmin() {
     showToast("Error cargando usuarios", "error");
   }
 
-  // Logs
+  // 2. Obtener Logs
   try {
     const res = await fetch(BASE_URL, {
       method: "POST",
@@ -99,6 +106,7 @@ async function cargarDatosAdmin() {
     renderLogs(logs);
   } catch (e) {
     console.error(e);
+    // No mostramos toast de error en logs para no saturar
   }
 }
 
@@ -106,12 +114,13 @@ function renderUsers(users) {
   const tbody = document.getElementById("usersBody");
   tbody.innerHTML = "";
   if (!users || users.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No hay datos</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2rem;">No hay datos disponibles</td></tr>`;
     return;
   }
 
   users.forEach((u) => {
     if (!u) return;
+    // Normalizamos el estado (puede venir como 'Activa', 'ACTIVA', 'activa')
     const estadoRaw = u.estado || u.Estado || "Inactivo";
     const isActive = estadoRaw.toString().toUpperCase() === "ACTIVA";
     const nextState = isActive ? "PAUSADA" : "ACTIVA";
@@ -119,16 +128,19 @@ function renderUsers(users) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${u.Email || u.email || "-"}</td>
-      <td>${u.Nombre || ""} ${u.Apellido || ""}</td>
+      <td><strong>${u.Nombre || ""} ${u.Apellido || ""}</strong></td>
       <td>${u["Región"] || u.Region || "-"}</td>
       <td>${u.Frecuencia || "-"}</td>
-      <td><span class="badge ${isActive ? "badge-success" : "badge-warning"
-      }">${estadoRaw}</span></td>
+      <td>
+        <span class="badge ${isActive ? "badge-success" : "badge-warning"}">
+          ${estadoRaw}
+        </span>
+      </td>
       <td style="text-align: right;">
-        <button class="btn-action ${isActive ? "btn-danger" : "btn-success"
-      }" onclick="window.cambiarEstado('${u.Email}', '${nextState}', this)">
-          <i class="ph ${isActive ? "ph-pause" : "ph-play"}"></i> ${isActive ? "Pausar" : "Activar"
-      }
+        <button class="btn-action ${isActive ? "btn-danger" : "btn-success"}" 
+                onclick="window.cambiarEstado('${u.Email}', '${nextState}', this)">
+          <i class="ph-bold ${isActive ? "ph-pause" : "ph-play"}"></i> 
+          ${isActive ? "Pausar" : "Activar"}
         </button>
       </td>
     `;
@@ -139,30 +151,33 @@ function renderUsers(users) {
 function renderLogs(logs) {
   const tbody = document.getElementById("errorsBody");
   tbody.innerHTML = "";
-  if (!logs || logs.length === 0) return;
+  if (!logs || logs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Sin errores recientes ✨</td></tr>`;
+    return;
+  }
 
-  logs
-    .slice(-50)
-    .reverse()
-    .forEach((log) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-      <td style="font-size: 0.85rem;">${log.timestamp || "-"}</td>
+  // Mostrar solo los últimos 50
+  logs.slice(-50).reverse().forEach((log) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="font-size: 0.85rem; white-space: nowrap;">${log.timestamp || "-"}</td>
       <td>${log.workflow || "General"}</td>
       <td><span class="badge badge-info">${log.fuente || "n8n"}</span></td>
-      <td style="color: #d32f2f;">${log.mensaje || "Error"}</td>
+      <td style="color: #d32f2f; font-weight: 500;">${log.mensaje || "Error desconocido"}</td>
       <td><code>${log.nodo || "-"}</code></td>
     `;
-      tbody.appendChild(tr);
-    });
+    tbody.appendChild(tr);
+  });
 }
 
+// Función global para ser llamada desde el HTML
 window.cambiarEstado = async (email, nuevoEstado, btnElement) => {
   const emailLimpio = email.trim();
-  if (!confirm(`¿Cambiar estado de ${emailLimpio} a ${nuevoEstado}?`)) return;
+  if (!confirm(`¿Estás seguro de cambiar el estado de ${emailLimpio} a "${nuevoEstado}"?`)) return;
 
+  const originalText = btnElement.innerHTML;
   btnElement.disabled = true;
-  btnElement.innerHTML = "...";
+  btnElement.innerHTML = `<i class="ph ph-spinner ph-spin"></i> ...`;
 
   try {
     const res = await fetch(BASE_URL, {
@@ -171,26 +186,32 @@ window.cambiarEstado = async (email, nuevoEstado, btnElement) => {
       body: JSON.stringify({
         action: "update_status",
         email: emailLimpio,
-        nuevo_estado: nuevoEstado,
+        nuevo_estado: nuevoEstado, // Esto coincide con tu JSON de n8n
       }),
     });
     const data = await res.json();
 
-    if (data.status === "ok" || data.msg) {
-      showToast("✅ Estado actualizado", "success");
-      cargarDatosAdmin(); // Recargamos la tabla
+    if (data.status === "ok" || res.ok) {
+      showToast(`✅ Usuario actualizado a ${nuevoEstado}`, "success");
+      // Esperamos un poco y recargamos la tabla para ver el cambio
+      setTimeout(() => cargarDatosAdmin(), 500);
     } else {
-      showToast("Error al actualizar", "error");
+      showToast("⚠️ No se pudo actualizar. Revisa el servidor.", "error");
       btnElement.disabled = false;
+      btnElement.innerHTML = originalText;
     }
   } catch (error) {
-    showToast("Error de conexión", "error");
+    console.error(error);
+    showToast("❌ Error de conexión con n8n", "error");
     btnElement.disabled = false;
+    btnElement.innerHTML = originalText;
   }
 };
 
 function showToast(msg, type) {
   const container = document.getElementById("toast-container");
+  if (!container) return;
+
   const div = document.createElement("div");
   div.className = "toast";
 
@@ -203,15 +224,16 @@ function showToast(msg, type) {
   div.style.borderLeftColor = `var(${colorVar})`;
 
   div.innerHTML = `
-    <i class="ph-fill ${icon}" style="color: var(${colorVar}); font-size: 1.2rem;"></i>
-    <span>${msg}</span>
+    <i class="ph-fill ${icon}" style="color: var(${colorVar}); font-size: 1.5rem;"></i>
+    <span style="font-size: 0.95rem; font-weight: 500;">${msg}</span>
   `;
 
   container.appendChild(div);
+
+  // Auto-eliminar después de 3 segundos
   setTimeout(() => {
     div.style.opacity = "0";
     div.style.transform = "translateX(100%)";
     setTimeout(() => div.remove(), 300);
   }, 3000);
 }
-

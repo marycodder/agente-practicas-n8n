@@ -2,22 +2,31 @@
  * PANEL DE USUARIO (panel.js) - SERVIDOR 10.40.5.21
  **********************************************************/
 
-// ✅ URL APUNTANDO AL SERVIDOR DE LA U
+// ✅ URLS DEL BACKEND (n8n)
 const API_URL = "http://10.40.5.21:5678/webhook/panel/usuario";
+const UPDATE_URL = "http://10.40.5.21:5678/webhook/panel/usuario/update";
+const REPORTE_URL = "http://10.40.5.21:5678/webhook/panel/reporte";
+const ESTADO_URL = "http://10.40.5.21:5678/webhook/panel/estado";
+
+// 👇 CORREGIDO: Ahora coincide con tu captura de n8n (panel/ofertas/postular)
+const ACCION_URL = "http://10.40.5.21:5678/webhook/panel/ofertas/postular";
+
+// ✅ VARIABLE GLOBAL
+let todasLasOfertas = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const email = params.get("email");
 
   if (!email) {
-    document.getElementById("panelSubtitulo").innerText =
-      "Error: Falta correo en la URL.";
+    document.getElementById("panelSubtitulo").innerText = "Error: Falta correo en la URL.";
     document.getElementById("panelTitulo").style.color = "#ef4444";
     return;
   }
 
   cargarDatosUsuario(email);
   setupListeners(email);
+  setupFilterListeners();
 });
 
 async function cargarDatosUsuario(email) {
@@ -33,36 +42,126 @@ async function cargarDatosUsuario(email) {
     if (data.status === "ok" && data.usuario) {
       renderCabecera(data.usuario);
       renderPreferencias(data.usuario);
-      renderHistorial(data.ofertas);
+      todasLasOfertas = data.ofertas || [];
+      filtrarYOrdenar();
       showToast("Datos cargados correctamente", "info");
     } else {
-      document.getElementById("panelSubtitulo").innerText =
-        data.msg || "Usuario no encontrado.";
+      document.getElementById("panelSubtitulo").innerText = data.msg || "Usuario no encontrado.";
       showToast("No se encontraron datos", "error");
     }
   } catch (error) {
     console.error(error);
-    showToast("Error de conexión con el servidor (n8n)", "error");
+    showToast("Error de conexión con el servidor", "error");
   }
 }
 
+// =========================================================
+// 🔍 LÓGICA DE FILTRADO
+// =========================================================
+
+function setupFilterListeners() {
+  const searchInput = document.getElementById("searchInput");
+  const filterFuente = document.getElementById("filterFuente");
+  const filterModalidad = document.getElementById("filterModalidad");
+  const filterEstado = document.getElementById("filterEstado");
+  const filterFechaInicio = document.getElementById("filterFechaInicio");
+  const filterFechaFin = document.getElementById("filterFechaFin");
+  const sortOrder = document.getElementById("sortOrder");
+  const btnClearSearch = document.getElementById("btnClearSearch");
+  const btnResetFilters = document.getElementById("btnResetFilters");
+
+  const inputs = [searchInput, filterFuente, filterModalidad, filterEstado, filterFechaInicio, filterFechaFin, sortOrder];
+
+  inputs.forEach(el => {
+    if (el) {
+      el.addEventListener("input", filtrarYOrdenar);
+      el.addEventListener("change", filtrarYOrdenar);
+    }
+  });
+
+  if (btnClearSearch) {
+    btnClearSearch.addEventListener("click", () => {
+      if (searchInput) searchInput.value = "";
+      filtrarYOrdenar();
+    });
+  }
+
+  if (btnResetFilters) {
+    btnResetFilters.addEventListener("click", () => {
+      if (searchInput) searchInput.value = "";
+      if (filterFuente) filterFuente.value = "";
+      if (filterModalidad) filterModalidad.value = "";
+      if (filterEstado) filterEstado.value = "";
+      if (filterFechaInicio) filterFechaInicio.value = "";
+      if (filterFechaFin) filterFechaFin.value = "";
+      if (sortOrder) sortOrder.value = "desc";
+      filtrarYOrdenar();
+    });
+  }
+}
+
+function filtrarYOrdenar() {
+  const textoBusqueda = document.getElementById("searchInput")?.value.toLowerCase().trim() || "";
+  const fuenteVal = document.getElementById("filterFuente")?.value || "";
+  const modalidadVal = document.getElementById("filterModalidad")?.value || "";
+  const estadoVal = document.getElementById("filterEstado")?.value || "";
+  const fechaInicioVal = document.getElementById("filterFechaInicio")?.value || "";
+  const fechaFinVal = document.getElementById("filterFechaFin")?.value || "";
+  const ordenVal = document.getElementById("sortOrder")?.value || "desc";
+
+  let resultados = todasLasOfertas.filter(oferta => {
+    // Buscar SOLO POR TÍTULO
+    const titulo = (oferta.titulo || "").toLowerCase();
+    const coincideTexto = titulo.includes(textoBusqueda);
+
+    const coincideFuente = fuenteVal === "" || (oferta.fuente || "").toLowerCase().includes(fuenteVal.toLowerCase());
+    const coincideModalidad = modalidadVal === "" || (oferta.modalidad || "").toLowerCase().includes(modalidadVal.toLowerCase());
+
+    const estadoOferta = (oferta.estado_usuario || "pendiente").toLowerCase();
+    const coincideEstado = estadoVal === "" || estadoOferta === estadoVal.toLowerCase();
+
+    let coincideFecha = true;
+    if (oferta.fecha) {
+      const fechaOferta = oferta.fecha.substring(0, 10);
+      if (fechaInicioVal && fechaOferta < fechaInicioVal) coincideFecha = false;
+      if (fechaFinVal && fechaOferta > fechaFinVal) coincideFecha = false;
+    }
+
+    return coincideTexto && coincideFuente && coincideModalidad && coincideEstado && coincideFecha;
+  });
+
+  resultados.sort((a, b) => {
+    const fechaA = new Date(a.fecha || 0);
+    const fechaB = new Date(b.fecha || 0);
+    return ordenVal === "asc" ? fechaA - fechaB : fechaB - fechaA;
+  });
+
+  renderHistorial(resultados);
+}
+
+// =========================================================
+// RENDERIZADO
+// =========================================================
+
 function renderCabecera(usuario) {
   document.getElementById("panelEmail").innerText = usuario.Email;
-  document.getElementById(
-    "panelSubtitulo"
-  ).innerText = `Hola, ${usuario.Nombre}. Aquí tienes tu resumen.`;
+  document.getElementById("panelSubtitulo").innerText = `Hola, ${usuario.Nombre}. Aquí tienes tu resumen.`;
+  actualizarBotonPausar(usuario.Estado);
+}
 
+function actualizarBotonPausar(estado) {
   const btnPausar = document.getElementById("btnPausar");
-  const estadoActual = (usuario.Estado || "ACTIVA").toUpperCase();
+  if (!btnPausar) return;
+  const estadoNormalizado = (estado || "ACTIVA").toUpperCase();
 
-  if (estadoActual === "PAUSADA") {
-    btnPausar.innerHTML =
-      '<i class="ph-bold ph-play-circle"></i> Reanudar Servicio';
+  if (estadoNormalizado === "PAUSADA") {
+    btnPausar.innerHTML = '<i class="ph-bold ph-play-circle"></i> Reanudar Servicio';
     btnPausar.className = "btn-success";
+    btnPausar.dataset.estadoActual = "PAUSADA";
   } else {
-    btnPausar.innerHTML =
-      '<i class="ph-bold ph-pause-circle"></i> Pausar Servicio';
+    btnPausar.innerHTML = '<i class="ph-bold ph-pause-circle"></i> Pausar Servicio';
     btnPausar.className = "btn-warning";
+    btnPausar.dataset.estadoActual = "ACTIVA";
   }
 }
 
@@ -78,10 +177,7 @@ function setSelectValue(id, valor) {
     select.value = valor;
     if (select.selectedIndex === -1) {
       for (let i = 0; i < select.options.length; i++) {
-        if (
-          select.options[i].value.includes(valor) ||
-          valor.includes(select.options[i].value)
-        ) {
+        if (select.options[i].value.includes(valor) || valor.includes(select.options[i].value)) {
           select.selectedIndex = i;
           break;
         }
@@ -96,12 +192,13 @@ function renderHistorial(ofertas) {
   tbody.innerHTML = "";
 
   if (!ofertas || ofertas.length === 0) {
-    emptyDiv.hidden = false;
+    if (emptyDiv) emptyDiv.hidden = false;
+    updateActionButtons();
     return;
   }
-  emptyDiv.hidden = true;
+  if (emptyDiv) emptyDiv.hidden = true;
 
-  ofertas.forEach((oferta, index) => {
+  ofertas.forEach((oferta) => {
     const row = document.createElement("tr");
 
     let accionHtml = "";
@@ -117,75 +214,232 @@ function renderHistorial(ofertas) {
     if (estado === "descartado") badgeClass = "badge-danger";
     if (estado === "pendiente") badgeClass = "badge-warning";
 
+    // ⚠️ IMPORTANTE: Guardamos el LINK y EMPRESA en el checkbox para identificarlos al enviar
+    const identificador = JSON.stringify({
+      link: oferta.link || "",
+      empresa: oferta.empresa || "",
+      titulo: oferta.titulo || ""
+    });
+
     row.innerHTML = `
-      <td style="text-align: center"><input type="checkbox" class="offer-check" data-index="${index}"></td>
+      <td style="text-align: center">
+        <input type="checkbox" class="offer-check" value='${identificador}'>
+      </td>
       <td>${oferta.fecha || "-"}</td>
       <td><span class="badge badge-info">${oferta.fuente || "Web"}</span></td>
-      <td><strong>${oferta.empresa || "Empresa Confidencial"
-      }</strong><br><span style="font-size: 0.85rem; color: #666;">${oferta.titulo || "Puesto no especificado"
-      }</span></td>
+      <td><strong>${oferta.empresa || "Empresa Confidencial"}</strong><br><span style="font-size: 0.85rem; color: #666;">${oferta.titulo || "Puesto no especificado"}</span></td>
       <td>${oferta.ubicacion || "Chile"}</td>
       <td>${oferta.modalidad || "-"}</td>
-      <td><span class="badge ${badgeClass}">${oferta.estado_usuario || "Pendiente"
-      }</span></td>
+      <td><span class="badge ${badgeClass}">${oferta.estado_usuario || "Pendiente"}</span></td>
       <td style="text-align: right;">${accionHtml}</td>
     `;
     tbody.appendChild(row);
   });
+
+  updateActionButtons();
 }
 
+// =========================================================
+// LISTENERS Y ACCIONES
+// =========================================================
 function setupListeners(email) {
-  document.getElementById("prefsForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    alert("Función de guardar pendiente de implementar webhook update_prefs.");
-  });
 
+  // A. Botones de Acción Masiva (Postular / Descartar)
+  const btnPostular = document.getElementById("btnPostular");
+  const btnDescartar = document.getElementById("btnDescartar");
 
+  if (btnPostular) {
+    btnPostular.addEventListener("click", () => procesarAccionMasiva(email, "Postulado"));
+  }
+  if (btnDescartar) {
+    btnDescartar.addEventListener("click", () => procesarAccionMasiva(email, "Descartado"));
+  }
 
+  // B. Checkboxes
   const checkAll = document.getElementById("checkAll");
-  checkAll.addEventListener("change", (e) => {
-    document
-      .querySelectorAll(".offer-check")
-      .forEach((c) => (c.checked = e.target.checked));
-    updateActionButtons();
-  });
+  if (checkAll) {
+    checkAll.addEventListener("change", (e) => {
+      document.querySelectorAll(".offer-check").forEach((c) => (c.checked = e.target.checked));
+      updateActionButtons();
+    });
+  }
+  const historialBody = document.getElementById("historialBody");
+  if (historialBody) {
+    historialBody.addEventListener("change", (e) => {
+      if (e.target.classList.contains("offer-check")) updateActionButtons();
+    });
+  }
 
-  document.getElementById("historialBody").addEventListener("change", (e) => {
-    if (e.target.classList.contains("offer-check")) updateActionButtons();
-  });
+  // C. Guardar Preferencias
+  const prefsForm = document.getElementById("prefsForm");
+  if (prefsForm) {
+    prefsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("savePrefsBtn");
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Guardando...';
+
+      const payload = {
+        Email: email,
+        Frecuencia: document.getElementById("frecuencia").value,
+        Modalidad: document.getElementById("modalidad").value,
+        Region: document.getElementById("region").value
+      };
+
+      try {
+        const res = await fetch(UPDATE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.status === "ok") showToast("✅ Preferencias actualizadas", "success");
+        else showToast("⚠️ Hubo un problema", "error");
+      } catch (error) { showToast("❌ Error de conexión", "error"); }
+      finally { btn.disabled = false; btn.innerHTML = originalText; }
+    });
+  }
+
+  // D. Reporte Inmediato
+  const btnReporte = document.getElementById("btnReporteInmediato");
+  if (btnReporte) {
+    btnReporte.addEventListener("click", async () => {
+      const originalText = btnReporte.innerHTML;
+      btnReporte.disabled = true;
+      btnReporte.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Solicitando...';
+      try {
+        await fetch(REPORTE_URL, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email }),
+        });
+        showToast("🚀 Reporte solicitado.", "success");
+      } catch (e) { showToast("❌ Error de conexión", "error"); }
+      finally { setTimeout(() => { btnReporte.disabled = false; btnReporte.innerHTML = originalText; }, 3000); }
+    });
+  }
+
+  // E. Pausar Servicio
+  const btnPausar = document.getElementById("btnPausar");
+  if (btnPausar) {
+    btnPausar.addEventListener("click", async () => {
+      const estadoActual = btnPausar.dataset.estadoActual;
+      const accion = estadoActual === "ACTIVA" ? "PAUSAR" : "REANUDAR";
+      if (!confirm(`¿Deseas ${accion} el servicio?`)) return;
+
+      btnPausar.disabled = true;
+      btnPausar.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Procesando...';
+      try {
+        const res = await fetch(ESTADO_URL, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, accion: accion }),
+        });
+        if (res.ok) {
+          showToast(`✅ Servicio ${accion === "PAUSAR" ? "pausado" : "reanudado"}`, "success");
+          actualizarBotonPausar(accion === "PAUSAR" ? "PAUSADA" : "ACTIVA");
+        }
+      } catch (e) { showToast("❌ Error", "error"); }
+      finally { btnPausar.disabled = false; actualizarBotonPausar(btnPausar.dataset.estadoActual); }
+    });
+  }
+}
+
+// =========================================================
+// NUEVA FUNCIÓN: PROCESAR ACCIÓN MASIVA
+// =========================================================
+async function procesarAccionMasiva(email, nuevoEstado) {
+  // 1. Obtener seleccionados
+  const checkboxes = document.querySelectorAll(".offer-check:checked");
+  if (checkboxes.length === 0) return;
+
+  if (!confirm(`¿Vas a marcar ${checkboxes.length} ofertas como "${nuevoEstado}"?`)) return;
+
+  // 2. Extraer datos de los checkboxes (Link, Empresa, Titulo)
+  const ofertasSeleccionadas = Array.from(checkboxes).map(cb => JSON.parse(cb.value));
+
+  // 3. Preparar UI
+  const btnId = nuevoEstado === "Postulado" ? "btnPostular" : "btnDescartar";
+  const btn = document.getElementById(btnId);
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<i class="ph-bold ph-spinner ph-spin"></i> Enviando...`;
+
+  // 4. Enviar al Backend
+  try {
+    const payload = {
+      email: email,
+      estado: nuevoEstado, // "Postulado" o "Descartado"
+      ofertas: ofertasSeleccionadas
+    };
+
+    const res = await fetch(ACCION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (data.status === "ok" || res.ok) {
+      showToast(`✅ ${checkboxes.length} ofertas actualizadas a ${nuevoEstado}`, "success");
+
+      // 5. Actualizar la tabla localmente sin recargar página
+      todasLasOfertas.forEach(oferta => {
+        ofertasSeleccionadas.forEach(sel => {
+          // Comparamos por link (o titulo+empresa si no hay link)
+          if ((oferta.link && oferta.link === sel.link) ||
+            (oferta.titulo === sel.titulo && oferta.empresa === sel.empresa)) {
+            oferta.estado_usuario = nuevoEstado;
+          }
+        });
+      });
+
+      // Re-filtrar para actualizar la vista
+      filtrarYOrdenar();
+
+      // Limpiar selección
+      document.getElementById("checkAll").checked = false;
+      updateActionButtons();
+
+    } else {
+      showToast("⚠️ Error al actualizar ofertas", "error");
+    }
+
+  } catch (error) {
+    console.error(error);
+    showToast("❌ Error de conexión", "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
 }
 
 function updateActionButtons() {
   const selected = document.querySelectorAll(".offer-check:checked").length;
-  document.getElementById("btnPostular").disabled = selected === 0;
-  document.getElementById("btnDescartar").disabled = selected === 0;
-  document.getElementById("countSeleccion").innerText = selected;
+  const btnPostular = document.getElementById("btnPostular");
+  const btnDescartar = document.getElementById("btnDescartar");
+  const countSpan = document.getElementById("countSeleccion");
+
+  if (btnPostular) btnPostular.disabled = selected === 0;
+  if (btnDescartar) btnDescartar.disabled = selected === 0;
+  if (countSpan) countSpan.innerText = selected;
 }
 
 function showToast(msg, type) {
   const container = document.getElementById("toast-container");
+  if (!container) return;
   const div = document.createElement("div");
   div.className = "toast";
-
-  // Icono según tipo
   let icon = "ph-info";
   let colorVar = "--primary";
-
   if (type === "error") { icon = "ph-warning-circle"; colorVar = "--danger"; }
   else if (type === "success") { icon = "ph-check-circle"; colorVar = "--success"; }
-
   div.style.borderLeftColor = `var(${colorVar})`;
-
-  div.innerHTML = `
-    <i class="ph-fill ${icon}" style="color: var(${colorVar}); font-size: 1.2rem;"></i>
-    <span>${msg}</span>
-  `;
-
+  div.innerHTML = `<i class="ph-fill ${icon}" style="color: var(${colorVar}); font-size: 1.2rem;"></i><span>${msg}</span>`;
   container.appendChild(div);
   setTimeout(() => {
     div.style.opacity = "0";
     div.style.transform = "translateX(100%)";
-    setTimeout(() => div.remove(), 300); // Esperar animación
+    setTimeout(() => div.remove(), 300);
   }, 3000);
 }
-

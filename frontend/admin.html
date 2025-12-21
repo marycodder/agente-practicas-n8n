@@ -1,269 +1,308 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin - Buscador Prácticas</title>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <style>
-      /* Estilos Esenciales Integrados */
-      body {
-        font-family: "Segoe UI", sans-serif;
-        background: #f8fafc;
-        margin: 0;
-        color: #334155;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Buscador Prácticas</title>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    /* ✅ 1. VARIABLES GLOBALES (Necesarias para el JS) */
+    :root {
+      --primary: #3b82f6;
+      --success: #10b981;
+      --danger: #ef4444;
+      --bg-light: #f8fafc;
+      --text-dark: #334155;
+      --border: #e2e8f0;
+    }
+
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: var(--bg-light);
+      margin: 0;
+      color: var(--text-dark);
+    }
+
+    /* Login */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+
+    .login-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      width: 300px;
+      text-align: center;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    /* Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 1rem;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    .nav-tab {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      color: #64748b;
+      font-weight: 600;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover {
+      color: var(--primary);
+    }
+
+    .nav-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* Tablas */
+    .card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    /* Botones y Badges */
+    .badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-warning {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+
+    .badge-info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .btn-action {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: white;
+      transition: opacity 0.2s;
+    }
+
+    .btn-action:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-success {
+      background-color: var(--success);
+    }
+
+    .btn-danger {
+      background-color: var(--danger);
+    }
+
+    .btn-logout {
+      background: white;
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      color: #475569;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 10px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    /* ✅ 2. ESTILOS FALTANTES PARA TOAST (Notificaciones) */
+    #toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: white;
+      padding: 1rem;
+      border-radius: 6px;
+      border-left: 5px solid var(--primary);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 280px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
       }
 
-      /* Login */
-      .login-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: #e2e8f0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 999;
+      to {
+        transform: translateX(0);
+        opacity: 1;
       }
-      .login-card {
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        width: 300px;
-        text-align: center;
-      }
+    }
+  </style>
+</head>
 
-      /* Layout */
-      .container {
-        max-width: 1100px;
-        margin: 2rem auto;
-        padding: 0 1rem;
-      }
-      .admin-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-      }
-
-      /* Tabs */
-      .nav-tabs {
-        display: flex;
-        gap: 1rem;
-        border-bottom: 2px solid #e2e8f0;
-        margin-bottom: 1.5rem;
-      }
-      .nav-tab {
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        color: #64748b;
-        font-weight: 600;
-        border-bottom: 2px solid transparent;
-      }
-      .nav-tab.active {
-        color: #3b82f6;
-        border-bottom-color: #3b82f6;
-      }
-
-      /* Tablas */
-      .card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        overflow-x: auto;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 700px;
-      }
-      th,
-      td {
-        text-align: left;
-        padding: 12px;
-        border-bottom: 1px solid #e2e8f0;
-      }
-      th {
-        background: #f1f5f9;
-        color: #475569;
-        font-weight: 600;
-        font-size: 0.9rem;
-      }
-
-      /* Elementos UI */
-      .badge {
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: bold;
-      }
-      .badge-success {
-        background: #dcfce7;
-        color: #166534;
-      }
-      .badge-warning {
-        background: #fef9c3;
-        color: #854d0e;
-      }
-      .badge-info {
-        background: #dbeafe;
-        color: #1e40af;
-      }
-
-      .btn-action {
-        padding: 6px 12px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.85rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        color: white;
-      }
-      .btn-success {
-        background-color: #10b981;
-      }
-      .btn-danger {
-        background-color: #ef4444;
-      }
-
-      .btn-logout {
-        background: white;
-        border: 1px solid #cbd5e1;
-        padding: 8px 12px;
-        cursor: pointer;
-        border-radius: 6px;
-        color: #475569;
-      }
-      .btn-primary {
-        width: 100%;
-        padding: 10px;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-top: 10px;
-      }
-      input {
-        width: 100%;
-        padding: 10px;
-        margin: 5px 0;
-        border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        box-sizing: border-box;
-      }
-
-      #toast-container {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 1000;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="loginOverlay" class="login-overlay">
-      <div class="login-card">
-        <h2><i class="ph ph-lock-key"></i> Admin</h2>
-        <form id="loginForm">
-          <input type="text" id="adminUser" placeholder="Usuario" required />
-          <input
-            type="password"
-            id="adminPass"
-            placeholder="Contraseña"
-            required
-          />
-          <button type="submit" class="btn-primary">Ingresar</button>
-        </form>
-      </div>
+<body>
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <h2><i class="ph ph-lock-key"></i> Admin</h2>
+      <form id="loginForm">
+        <input type="text" id="adminUser" placeholder="Usuario" required />
+        <input type="password" id="adminPass" placeholder="Contraseña" required />
+        <button type="submit" class="btn-primary">Ingresar</button>
+      </form>
     </div>
+  </div>
 
-    <main id="adminContent" class="container" style="display: none">
-      <header class="admin-header">
-        <h1><i class="ph ph-shield-check"></i> Panel de Administración</h1>
-        <button id="btnLogout" class="btn-logout">
-          <i class="ph ph-sign-out"></i> Salir
+  <main id="adminContent" class="container" style="display: none">
+    <header class="admin-header">
+      <h1><i class="ph ph-shield-check"></i> Panel de Administración</h1>
+      <button id="btnLogout" class="btn-logout">
+        <i class="ph ph-sign-out"></i> Salir
+      </button>
+    </header>
+
+    <nav class="nav-tabs">
+      <div id="btnTabUsers" class="nav-tab active">Usuarios</div>
+      <div id="btnTabErrors" class="nav-tab">Bitácora de Errores</div>
+    </nav>
+
+    <section id="tabUsers" class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>Usuarios Registrados</h3>
+        <button onclick="cargarDatosAdmin()" class="btn-logout" title="Recargar">
+          <i class="ph ph-arrows-clockwise"></i>
         </button>
-      </header>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Nombre</th>
+            <th>Región</th>
+            <th>Frecuencia</th>
+            <th>Estado</th>
+            <th style="text-align: right">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </section>
 
-      <nav class="nav-tabs">
-        <div id="btnTabUsers" class="nav-tab active">Usuarios</div>
-        <div id="btnTabErrors" class="nav-tab">Bitácora de Errores</div>
-      </nav>
+    <section id="tabErrors" class="card" style="display: none">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="color: #ef4444">Errores del Sistema</h3>
+        <button onclick="cargarDatosAdmin()" class="btn-logout" title="Recargar">
+          <i class="ph ph-arrows-clockwise"></i>
+        </button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Workflow</th>
+            <th>Fuente</th>
+            <th>Mensaje</th>
+            <th>Nodo</th>
+          </tr>
+        </thead>
+        <tbody id="errorsBody"></tbody>
+      </table>
+    </section>
+  </main>
 
-      <section id="tabUsers" class="card">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-          "
-        >
-          <h3>Usuarios Registrados</h3>
-          <button
-            onclick="cargarDatosAdmin()"
-            class="btn-logout"
-            title="Recargar"
-          >
-            <i class="ph ph-arrows-clockwise"></i>
-          </button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Nombre</th>
-              <th>Región</th>
-              <th>Frecuencia</th>
-              <th>Estado</th>
-              <th style="text-align: right">Acción</th>
-            </tr>
-          </thead>
-          <tbody id="usersBody"></tbody>
-        </table>
-      </section>
+  <div id="toast-container"></div>
+  <script src="admin.js"></script>
+</body>
 
-      <section id="tabErrors" class="card" style="display: none">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-          "
-        >
-          <h3 style="color: #ef4444">Errores del Sistema</h3>
-          <button
-            onclick="cargarDatosAdmin()"
-            class="btn-logout"
-            title="Recargar"
-          >
-            <i class="ph ph-arrows-clockwise"></i>
-          </button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Workflow</th>
-              <th>Fuente</th>
-              <th>Mensaje</th>
-              <th>Nodo</th>
-            </tr>
-          </thead>
-          <tbody id="errorsBody"></tbody>
-        </table>
-      </section>
-    </main>
-
-    <div id="toast-container"></div>
-    <script src="admin.js"></script>
-  </body>
 </html>
