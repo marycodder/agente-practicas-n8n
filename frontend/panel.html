@@ -6,9 +6,9 @@
   <title>Panel de Prácticas</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link rel="stylesheet" href="styles.css?v=2.1" />
+  <link rel="stylesheet" href="styles.css?v=2.2" />
 
-  <script src="theme.js?v=2.1"></script>
+  <script src="theme.js?v=2.2"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
@@ -97,11 +97,17 @@
         </form>
 
         <div style="border-top: 1px solid var(--border); margin-top: 2rem; padding-top: 1.5rem;">
-          <h3 style="font-size: 1rem; color: #cbd5e1; margin-bottom: 0.5rem">
-            <i class="ph ph-lightning"></i> Reporte Inmediato
-          </h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem">
+            <h3 style="font-size: 1rem; color: #cbd5e1; margin: 0">
+              <i class="ph ph-lightning"></i> Reporte Inmediato
+            </h3>
+            <span id="badgeLimites" class="badge badge-info" style="font-size: 0.75rem;">
+              Cargando...
+            </span>
+          </div>
+
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-            ¿No quieres esperar? Solicita una búsqueda ahora mismo.
+            Solicita una búsqueda ahora mismo.
           </p>
           <button id="btnReporteInmediato" type="button" style="
                 background-color: #6366f1;
@@ -160,7 +166,7 @@
         <div class="filters-bar">
           <div class="search-container">
             <i class="ph ph-magnifying-glass search-icon"></i>
-            <input type="text" id="searchInput" placeholder="Buscar empresa o título..." />
+            <input type="text" id="searchInput" placeholder="Buscar por título..." />
             <button id="btnClearSearch" class="search-clear" title="Borrar búsqueda">
               <i class="ph-fill ph-x-circle"></i>
             </button>
@@ -234,7 +240,7 @@
     </section>
   </main>
 
-  <script src="panel.js?v=2.1"></script>
+  <script src="panel.js?v=2.2"></script>
 </body>
 
 </html>

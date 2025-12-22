@@ -3,6 +3,13 @@
 ## 🌐 Acceso a la Aplicación
 
 > **Nota:** Debes estar conectado a la VPN institucional para acceder a las siguientes vistas.
+   Conexión VPN  
+   1.       Instalar Aplicación Forticlient VPN   Link:     
+   •	https://comunidadingenieria.cl/FortiClientVPNInstaller.exe
+   2.       Agregar los Parámetros de Conexión 
+   •	Gateway Remoto: 200.27.73.13 
+   •	Usuario:  Usuario Intranet
+   •	Password: Password de Intranet  
 
 ### Frontend (Usuarios y Administradores)
 

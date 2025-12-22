@@ -7,12 +7,11 @@ const API_URL = "http://10.40.5.21:5678/webhook/panel/usuario";
 const UPDATE_URL = "http://10.40.5.21:5678/webhook/panel/usuario/update";
 const REPORTE_URL = "http://10.40.5.21:5678/webhook/panel/reporte";
 const ESTADO_URL = "http://10.40.5.21:5678/webhook/panel/estado";
-
-// 👇 CORREGIDO: Ahora coincide con tu captura de n8n (panel/ofertas/postular)
 const ACCION_URL = "http://10.40.5.21:5678/webhook/panel/ofertas/postular";
 
-// ✅ VARIABLE GLOBAL
+// ✅ VARIABLES GLOBALES
 let todasLasOfertas = [];
+let limitesGlobales = { disponibles: 0 };
 
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
@@ -40,11 +39,45 @@ async function cargarDatosUsuario(email) {
     const data = await res.json();
 
     if (data.status === "ok" && data.usuario) {
+
+      // =========================================================
+      // 🛑 LÓGICA DE INTERCEPCIÓN (Reporte Inicial Automático)
+      // =========================================================
+      // Si n8n nos dice "requiere_reporte_inicial: true" y el usuario tiene cupos:
+      if (data.requiere_reporte_inicial === true && data.limites && data.limites.disponibles > 0) {
+
+        console.log("⚡ Usuario sin historial detectado. Generando reporte primero...");
+
+        // 1. Mostrar estado de carga en la UI (No renderizamos la tabla vacía aún)
+        document.getElementById("panelEmail").innerText = data.usuario.Email;
+        document.getElementById("panelSubtitulo").innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Generando tu primer reporte de ofertas...';
+        showToast("👋 ¡Bienvenido! Buscando ofertas para ti...", "info");
+
+        // Guardamos límites en la variable global por si acaso
+        limitesGlobales = data.limites;
+
+        // 2. Ejecutar reporte y DETENER la carga normal
+        // La función solicitarReporte se encargará de recargar la página al finalizar.
+        await solicitarReporte(email, true);
+        return; // <--- IMPORTANTE: Detenemos aquí. 
+      }
+      // =========================================================
+
+      // Si NO requiere reporte inicial (flujo normal):
       renderCabecera(data.usuario);
       renderPreferencias(data.usuario);
+
+      if (data.limites) {
+        limitesGlobales = data.limites;
+        renderLimites(data.limites);
+      } else {
+        renderLimites({ disponibles: "..." });
+      }
+
       todasLasOfertas = data.ofertas || [];
       filtrarYOrdenar();
       showToast("Datos cargados correctamente", "info");
+
     } else {
       document.getElementById("panelSubtitulo").innerText = data.msg || "Usuario no encontrado.";
       showToast("No se encontraron datos", "error");
@@ -56,21 +89,115 @@ async function cargarDatosUsuario(email) {
 }
 
 // =========================================================
-// 🔍 LÓGICA DE FILTRADO
+// ⚡ FUNCIÓN UNIFICADA DE REPORTE (Manual y Automático)
+// =========================================================
+async function solicitarReporte(email, esAutomatico = false) {
+
+  // 🛑 VALIDACIÓN DE LÍMITES
+  if (limitesGlobales.disponibles <= 0) {
+    showToast("⛔ Límite alcanzado: No tienes reportes disponibles.", "error");
+    return;
+  }
+
+  const btnReporte = document.getElementById("btnReporteInmediato");
+  let originalText = "";
+
+  // UI: Bloquear botón visualmente
+  if (btnReporte) {
+    originalText = btnReporte.innerHTML;
+    btnReporte.disabled = true;
+    btnReporte.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Procesando...';
+  }
+
+  try {
+    const res = await fetch(REPORTE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email }),
+    });
+
+    if (res.ok) {
+      if (esAutomatico) {
+        showToast("✅ Primer reporte generado. Cargando ofertas...", "success");
+      } else {
+        showToast("🚀 Reporte generado exitosamente.", "success");
+      }
+
+      // RECARGA DE PÁGINA
+      // Esto hará que al volver a cargar, n8n encuentre las ofertas nuevas
+      // y ya no pida el reporte inicial (rompiendo el bucle).
+      setTimeout(() => {
+        if (esAutomatico) showToast("📥 Actualizando tabla...", "info");
+        location.reload();
+      }, 4000);
+
+    } else {
+      showToast("⚠️ Hubo un problema al generar el reporte", "error");
+      // Si falla en automático, recargamos igual para que el usuario no quede atrapado en el spinner
+      if (esAutomatico) setTimeout(() => location.reload(), 4000);
+    }
+
+  } catch (e) {
+    console.error(e);
+    showToast("❌ Error de conexión al solicitar reporte", "error");
+    if (esAutomatico) setTimeout(() => location.reload(), 4000);
+  } finally {
+    // Restaurar botón (solo si no se recarga antes)
+    if (btnReporte) {
+      setTimeout(() => {
+        btnReporte.disabled = false;
+        btnReporte.innerHTML = originalText || '<i class="ph-bold ph-paper-plane-right"></i> Solicitar Ahora';
+      }, 2000);
+    }
+  }
+}
+
+// =========================================================
+// RENDERIZAR LÍMITES
+// =========================================================
+function renderLimites(limites) {
+  const badge = document.getElementById("badgeLimites");
+  const btn = document.getElementById("btnReporteInmediato");
+
+  if (!badge) return;
+
+  const disp = limites.disponibles;
+  badge.innerText = `${disp} Disponibles`;
+
+  if (disp > 0 || disp === "...") {
+    badge.className = "badge badge-success";
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.style.cursor = "pointer";
+      btn.style.backgroundColor = "#6366f1";
+    }
+  } else {
+    badge.className = "badge badge-danger";
+    badge.innerText = "0 Disponibles (Agotado)";
+    if (btn) {
+      btn.disabled = true;
+      btn.title = "Has alcanzado tu límite mensual.";
+      btn.style.backgroundColor = "#94a3b8";
+      btn.style.cursor = "not-allowed";
+    }
+  }
+}
+
+// =========================================================
+// LÓGICA DE FILTRADO
 // =========================================================
 
 function setupFilterListeners() {
-  const searchInput = document.getElementById("searchInput");
-  const filterFuente = document.getElementById("filterFuente");
-  const filterModalidad = document.getElementById("filterModalidad");
-  const filterEstado = document.getElementById("filterEstado");
-  const filterFechaInicio = document.getElementById("filterFechaInicio");
-  const filterFechaFin = document.getElementById("filterFechaFin");
-  const sortOrder = document.getElementById("sortOrder");
-  const btnClearSearch = document.getElementById("btnClearSearch");
-  const btnResetFilters = document.getElementById("btnResetFilters");
-
-  const inputs = [searchInput, filterFuente, filterModalidad, filterEstado, filterFechaInicio, filterFechaFin, sortOrder];
+  const inputs = [
+    document.getElementById("searchInput"),
+    document.getElementById("filterFuente"),
+    document.getElementById("filterModalidad"),
+    document.getElementById("filterEstado"),
+    document.getElementById("filterFechaInicio"),
+    document.getElementById("filterFechaFin"),
+    document.getElementById("sortOrder")
+  ];
 
   inputs.forEach(el => {
     if (el) {
@@ -79,25 +206,24 @@ function setupFilterListeners() {
     }
   });
 
-  if (btnClearSearch) {
-    btnClearSearch.addEventListener("click", () => {
-      if (searchInput) searchInput.value = "";
-      filtrarYOrdenar();
-    });
-  }
+  const btnClear = document.getElementById("btnClearSearch");
+  if (btnClear) btnClear.addEventListener("click", () => {
+    const input = document.getElementById("searchInput");
+    if (input) input.value = "";
+    filtrarYOrdenar();
+  });
 
-  if (btnResetFilters) {
-    btnResetFilters.addEventListener("click", () => {
-      if (searchInput) searchInput.value = "";
-      if (filterFuente) filterFuente.value = "";
-      if (filterModalidad) filterModalidad.value = "";
-      if (filterEstado) filterEstado.value = "";
-      if (filterFechaInicio) filterFechaInicio.value = "";
-      if (filterFechaFin) filterFechaFin.value = "";
-      if (sortOrder) sortOrder.value = "desc";
-      filtrarYOrdenar();
+  const btnReset = document.getElementById("btnResetFilters");
+  if (btnReset) btnReset.addEventListener("click", () => {
+    const ids = ["searchInput", "filterFuente", "filterModalidad", "filterEstado", "filterFechaInicio", "filterFechaFin"];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
     });
-  }
+    const sort = document.getElementById("sortOrder");
+    if (sort) sort.value = "desc";
+    filtrarYOrdenar();
+  });
 }
 
 function filtrarYOrdenar() {
@@ -110,13 +236,10 @@ function filtrarYOrdenar() {
   const ordenVal = document.getElementById("sortOrder")?.value || "desc";
 
   let resultados = todasLasOfertas.filter(oferta => {
-    // Buscar SOLO POR TÍTULO
     const titulo = (oferta.titulo || "").toLowerCase();
     const coincideTexto = titulo.includes(textoBusqueda);
-
     const coincideFuente = fuenteVal === "" || (oferta.fuente || "").toLowerCase().includes(fuenteVal.toLowerCase());
     const coincideModalidad = modalidadVal === "" || (oferta.modalidad || "").toLowerCase().includes(modalidadVal.toLowerCase());
-
     const estadoOferta = (oferta.estado_usuario || "pendiente").toLowerCase();
     const coincideEstado = estadoVal === "" || estadoOferta === estadoVal.toLowerCase();
 
@@ -126,7 +249,6 @@ function filtrarYOrdenar() {
       if (fechaInicioVal && fechaOferta < fechaInicioVal) coincideFecha = false;
       if (fechaFinVal && fechaOferta > fechaFinVal) coincideFecha = false;
     }
-
     return coincideTexto && coincideFuente && coincideModalidad && coincideEstado && coincideFecha;
   });
 
@@ -140,7 +262,7 @@ function filtrarYOrdenar() {
 }
 
 // =========================================================
-// RENDERIZADO
+// RENDERIZADO CABECERA Y TABLA
 // =========================================================
 
 function renderCabecera(usuario) {
@@ -214,7 +336,6 @@ function renderHistorial(ofertas) {
     if (estado === "descartado") badgeClass = "badge-danger";
     if (estado === "pendiente") badgeClass = "badge-warning";
 
-    // ⚠️ IMPORTANTE: Guardamos el LINK y EMPRESA en el checkbox para identificarlos al enviar
     const identificador = JSON.stringify({
       link: oferta.link || "",
       empresa: oferta.empresa || "",
@@ -244,18 +365,16 @@ function renderHistorial(ofertas) {
 // =========================================================
 function setupListeners(email) {
 
-  // A. Botones de Acción Masiva (Postular / Descartar)
+  const btnReporte = document.getElementById("btnReporteInmediato");
+  if (btnReporte) {
+    btnReporte.addEventListener("click", () => solicitarReporte(email, false));
+  }
+
   const btnPostular = document.getElementById("btnPostular");
   const btnDescartar = document.getElementById("btnDescartar");
+  if (btnPostular) btnPostular.addEventListener("click", () => procesarAccionMasiva(email, "Postulado"));
+  if (btnDescartar) btnDescartar.addEventListener("click", () => procesarAccionMasiva(email, "Descartado"));
 
-  if (btnPostular) {
-    btnPostular.addEventListener("click", () => procesarAccionMasiva(email, "Postulado"));
-  }
-  if (btnDescartar) {
-    btnDescartar.addEventListener("click", () => procesarAccionMasiva(email, "Descartado"));
-  }
-
-  // B. Checkboxes
   const checkAll = document.getElementById("checkAll");
   if (checkAll) {
     checkAll.addEventListener("change", (e) => {
@@ -270,7 +389,6 @@ function setupListeners(email) {
     });
   }
 
-  // C. Guardar Preferencias
   const prefsForm = document.getElementById("prefsForm");
   if (prefsForm) {
     prefsForm.addEventListener("submit", async (e) => {
@@ -301,25 +419,6 @@ function setupListeners(email) {
     });
   }
 
-  // D. Reporte Inmediato
-  const btnReporte = document.getElementById("btnReporteInmediato");
-  if (btnReporte) {
-    btnReporte.addEventListener("click", async () => {
-      const originalText = btnReporte.innerHTML;
-      btnReporte.disabled = true;
-      btnReporte.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Solicitando...';
-      try {
-        await fetch(REPORTE_URL, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email }),
-        });
-        showToast("🚀 Reporte solicitado.", "success");
-      } catch (e) { showToast("❌ Error de conexión", "error"); }
-      finally { setTimeout(() => { btnReporte.disabled = false; btnReporte.innerHTML = originalText; }, 3000); }
-    });
-  }
-
-  // E. Pausar Servicio
   const btnPausar = document.getElementById("btnPausar");
   if (btnPausar) {
     btnPausar.addEventListener("click", async () => {
@@ -344,67 +443,44 @@ function setupListeners(email) {
   }
 }
 
-// =========================================================
-// NUEVA FUNCIÓN: PROCESAR ACCIÓN MASIVA
-// =========================================================
 async function procesarAccionMasiva(email, nuevoEstado) {
-  // 1. Obtener seleccionados
   const checkboxes = document.querySelectorAll(".offer-check:checked");
   if (checkboxes.length === 0) return;
 
   if (!confirm(`¿Vas a marcar ${checkboxes.length} ofertas como "${nuevoEstado}"?`)) return;
 
-  // 2. Extraer datos de los checkboxes (Link, Empresa, Titulo)
   const ofertasSeleccionadas = Array.from(checkboxes).map(cb => JSON.parse(cb.value));
-
-  // 3. Preparar UI
   const btnId = nuevoEstado === "Postulado" ? "btnPostular" : "btnDescartar";
   const btn = document.getElementById(btnId);
   const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = `<i class="ph-bold ph-spinner ph-spin"></i> Enviando...`;
 
-  // 4. Enviar al Backend
   try {
-    const payload = {
-      email: email,
-      estado: nuevoEstado, // "Postulado" o "Descartado"
-      ofertas: ofertasSeleccionadas
-    };
-
+    const payload = { email: email, estado: nuevoEstado, ofertas: ofertasSeleccionadas };
     const res = await fetch(ACCION_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-
     const data = await res.json();
 
     if (data.status === "ok" || res.ok) {
-      showToast(`✅ ${checkboxes.length} ofertas actualizadas a ${nuevoEstado}`, "success");
-
-      // 5. Actualizar la tabla localmente sin recargar página
+      showToast(`✅ ${checkboxes.length} ofertas actualizadas`, "success");
       todasLasOfertas.forEach(oferta => {
         ofertasSeleccionadas.forEach(sel => {
-          // Comparamos por link (o titulo+empresa si no hay link)
           if ((oferta.link && oferta.link === sel.link) ||
             (oferta.titulo === sel.titulo && oferta.empresa === sel.empresa)) {
             oferta.estado_usuario = nuevoEstado;
           }
         });
       });
-
-      // Re-filtrar para actualizar la vista
       filtrarYOrdenar();
-
-      // Limpiar selección
       document.getElementById("checkAll").checked = false;
       updateActionButtons();
-
     } else {
       showToast("⚠️ Error al actualizar ofertas", "error");
     }
-
   } catch (error) {
     console.error(error);
     showToast("❌ Error de conexión", "error");

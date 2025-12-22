@@ -1,0 +1,62 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "documentId": {
+                    "__rl": true,
+                    "value": "1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": 808930077,
+                    "mode": "list",
+                    "cachedResultName": "LimitesReportes",
+                    "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Lzn7Q2zmv_7ZmR7RbtEe8sSHyciuNY_HlD28eOxyr3c/edit#gid=808930077"
+                },
+                "filtersUI": {
+                    "values": [
+                        {
+                            "lookupColumn": "email",
+                            "lookupValue": "={{ $json.body.email || $json.email }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Traer Limites",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4,
+            "position": [
+                1000,
+                400
+            ],
+            "alwaysOutputData": true
+        },
+        {
+            "parameters": {
+                "jsCode": "// Obtener datos del nodo anterior\nconst datosLimite = $input.all()[0]?.json || {};\n\n// Valores por defecto para usuarios nuevos\n// Si no existe en la hoja, le damos 2 reportes gratis y 0 usados.\nconst limite = datosLimite.limite ? Number(datosLimite.limite) : 2;\nconst usados = datosLimite.usados ? Number(datosLimite.usados) : 0;\n\n// Calculamos disponibles\nlet disponibles = limite - usados;\nif (disponibles < 0) disponibles = 0;\n\n// Devolvemos todo junto para que el nodo final lo tenga\nreturn [{\n  json: {\n    ...$json, // Mantiene los datos anteriores (usuario, ofertas)\n    limites: {\n      total: limite,\n      usados: usados,\n      disponibles: disponibles\n    }\n  }\n}];"
+            },
+            "name": "Calcular Disponibles",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1220,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "Traer Limites": {
+            "main": [
+                [
+                    {
+                        "node": "Calcular Disponibles",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
